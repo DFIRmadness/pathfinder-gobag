@@ -1958,6 +1958,171 @@
       renderAllTimelines();
     };
 
+    // ── Full Page mode ─────────────────────────────────────────────────────────
+    var fpDragging = false, fpDragStartX = 0, fpDragStartY = 0, fpPanX = 0, fpPanY = 0, fpScale = 1;
+
+    function applyFpTransform() {
+      var inner = document.getElementById('tl-fp-pan-inner');
+      var outer = document.getElementById('tl-fp-pan-outer');
+      if (!inner) return;
+      inner.style.transform = 'translate(' + fpPanX + 'px,' + fpPanY + 'px) scale(' + fpScale + ')';
+      var zp = document.getElementById('tl-fp-zoom-pct');
+      if (zp) zp.textContent = Math.round(fpScale * 100) + '%';
+      if (outer) {
+        var isAngled = localStorage.getItem('ir-timeline-mode') === 'angled';
+        outer.style.cursor = isAngled ? 'grab' : 'default';
+        outer.style.overflow = isAngled ? 'hidden' : 'auto';
+      }
+    }
+
+    function _fpMouseDown(e) {
+      if (localStorage.getItem('ir-timeline-mode') !== 'angled') return;
+      fpDragging = true;
+      fpDragStartX = e.clientX - fpPanX;
+      fpDragStartY = e.clientY - fpPanY;
+      var outer = document.getElementById('tl-fp-pan-outer');
+      if (outer) outer.style.cursor = 'grabbing';
+    }
+    function _fpMouseMove(e) {
+      if (!fpDragging) return;
+      fpPanX = e.clientX - fpDragStartX;
+      fpPanY = e.clientY - fpDragStartY;
+      applyFpTransform();
+    }
+    function _fpMouseUp() {
+      if (!fpDragging) return;
+      fpDragging = false;
+      var outer = document.getElementById('tl-fp-pan-outer');
+      if (outer) outer.style.cursor = 'grab';
+    }
+
+    window.fpZoomIn = function() {
+      fpScale = Math.min(3, Math.round((fpScale + 0.1) * 10) / 10);
+      applyFpTransform();
+    };
+    window.fpZoomOut = function() {
+      fpScale = Math.max(0.2, Math.round((fpScale - 0.1) * 10) / 10);
+      applyFpTransform();
+    };
+    window.fpResetTransform = function() {
+      fpPanX = 0; fpPanY = 0; fpScale = 1;
+      applyFpTransform();
+    };
+
+    window.fpToggleTitle = function() {
+      var existing = document.getElementById('tl-fp-title-float');
+      var btn = document.getElementById('tl-fp-title-btn');
+      if (existing) {
+        existing.remove();
+        if (btn) { btn.style.background = ''; btn.style.color = ''; btn.textContent = '🏷 Title'; }
+        return;
+      }
+      var pos = null;
+      try { pos = JSON.parse(localStorage.getItem('ir-fp-title-pos')); } catch(e) {}
+      var el = document.createElement('div');
+      el.id = 'tl-fp-title-float';
+      var isDark = document.documentElement.classList.contains('dark');
+      el.style.cssText = 'position:fixed;z-index:10001;cursor:move;user-select:none;' +
+        'left:' + (pos ? pos.x : Math.round(window.innerWidth / 2 - 200)) + 'px;' +
+        'top:' + (pos ? pos.y : 80) + 'px;' +
+        'background:' + (isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)') + ';' +
+        'color:' + (isDark ? '#f1f5f9' : '#1e293b') + ';' +
+        'font-size:1.5rem;font-weight:900;line-height:1.15;' +
+        'padding:10px 18px;border-radius:8px;' +
+        'box-shadow:0 4px 24px rgba(0,0,0,0.18);';
+      el.textContent = localStorage.getItem('ir-incident-name') || 'Incident Timeline';
+      var tdx = 0, tdy = 0, tdragging = false;
+      el.addEventListener('mousedown', function(e) {
+        tdragging = true; tdx = e.clientX - el.offsetLeft; tdy = e.clientY - el.offsetTop; e.preventDefault();
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!tdragging) return;
+        el.style.left = (e.clientX - tdx) + 'px'; el.style.top = (e.clientY - tdy) + 'px';
+      });
+      document.addEventListener('mouseup', function() {
+        if (!tdragging) return; tdragging = false;
+        try { localStorage.setItem('ir-fp-title-pos', JSON.stringify({x: el.offsetLeft, y: el.offsetTop})); } catch(e) {}
+      });
+      document.body.appendChild(el);
+      if (btn) { btn.style.background = '#0ea5e9'; btn.style.color = '#fff'; btn.textContent = '🏷 Title ✓'; }
+    };
+
+    function _fpMoveToolbar() {
+      var ctrl = document.getElementById('tl-fp-controls');
+      if (!ctrl) return;
+      ctrl.innerHTML = '';
+      var fpInner = document.getElementById('tl-fp-inner');
+      var btns = fpInner ? fpInner.querySelector('#tl-fp-btns-row') : document.getElementById('tl-fp-btns-row');
+      if (btns) ctrl.appendChild(btns);
+    }
+
+    window.enterTimelineFullPage = function() {
+      var existing = document.getElementById('tl-fp-overlay');
+      if (existing) { existing.remove(); return; }
+      var isDark = document.documentElement.classList.contains('dark');
+      var overlay = document.createElement('div');
+      overlay.id = 'tl-fp-overlay';
+      if (isDark) overlay.classList.add('dark');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;display:flex;flex-direction:column;background:' + (isDark ? '#0f172a' : '#fff') + ';';
+
+      var btnCls = 'text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors';
+      var hdr = document.createElement('div');
+      hdr.style.cssText = 'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid ' + (isDark ? '#334155' : '#e2e8f0') + ';';
+      hdr.innerHTML = '<button onclick="window.exitTimelineFullPage()" class="' + btnCls + '">✕ Exit Full Page</button>' +
+        '<span style="font-size:0.75rem;color:' + (isDark ? '#64748b' : '#94a3b8') + '">Resize browser window for best screenshot</span>' +
+        '<div style="margin-left:auto;display:inline-flex;border-radius:8px;border:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';overflow:hidden;">' +
+          '<button onclick="window.fpZoomOut()" style="font-size:0.75rem;font-weight:500;padding:4px 10px;background:none;border:none;cursor:pointer;color:' + (isDark ? '#94a3b8' : '#475569') + ';">−</button>' +
+          '<span id="tl-fp-zoom-pct" style="font-size:0.75rem;font-weight:500;padding:4px 10px;border-left:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';border-right:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';color:' + (isDark ? '#94a3b8' : '#475569') + ';">100%</span>' +
+          '<button onclick="window.fpZoomIn()" style="font-size:0.75rem;font-weight:500;padding:4px 10px;background:none;border:none;cursor:pointer;color:' + (isDark ? '#94a3b8' : '#475569') + ';">+</button>' +
+        '</div>' +
+        '<button onclick="window.fpResetTransform()" title="Reset pan &amp; zoom" style="font-size:0.75rem;font-weight:500;padding:4px 12px;border-radius:8px;border:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';background:none;cursor:pointer;color:' + (isDark ? '#94a3b8' : '#475569') + ';">↺</button>';
+
+      var ctrl = document.createElement('div');
+      ctrl.id = 'tl-fp-controls';
+      ctrl.style.cssText = 'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid ' + (isDark ? '#334155' : '#e2e8f0') + ';background:' + (isDark ? '#0f172a' : '#fff') + ';';
+
+      var panOuter = document.createElement('div');
+      panOuter.id = 'tl-fp-pan-outer';
+      panOuter.style.cssText = 'flex:1;min-height:0;overflow:auto;user-select:none;cursor:grab;';
+      var panInner = document.createElement('div');
+      panInner.id = 'tl-fp-pan-inner';
+      panInner.style.cssText = 'transform-origin:0 0;will-change:transform;';
+      var fpInner = document.createElement('div');
+      fpInner.id = 'tl-fp-inner';
+      panInner.appendChild(fpInner);
+      panOuter.appendChild(panInner);
+
+      overlay.appendChild(hdr);
+      overlay.appendChild(ctrl);
+      overlay.appendChild(panOuter);
+      document.body.appendChild(overlay);
+
+      var fpStyle = document.createElement('style');
+      fpStyle.id = 'tl-fp-style';
+      fpStyle.textContent = '#tl-fp-inner > div { border: none !important; background: transparent !important; border-radius: 0 !important; box-shadow: none !important; }';
+      document.head.appendChild(fpStyle);
+
+      panOuter.addEventListener('mousedown', _fpMouseDown);
+      window.addEventListener('mousemove', _fpMouseMove);
+      window.addEventListener('mouseup', _fpMouseUp);
+
+      fpPanX = 0; fpPanY = 0; fpScale = 1;
+      renderTimeline(fpInner);
+      _fpMoveToolbar();
+      applyFpTransform();
+    };
+
+    window.exitTimelineFullPage = function() {
+      var overlay = document.getElementById('tl-fp-overlay');
+      if (overlay) overlay.remove();
+      var style = document.getElementById('tl-fp-style');
+      if (style) style.remove();
+      var titleFloat = document.getElementById('tl-fp-title-float');
+      if (titleFloat) titleFloat.remove();
+      window.removeEventListener('mousemove', _fpMouseMove);
+      window.removeEventListener('mouseup', _fpMouseUp);
+    };
+
     window.tlSelectIcon = function(icon, btn) {
       var form = tlFindForm(btn);
       if (!form) return;
@@ -4197,7 +4362,7 @@
           '<h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">Presentation Timeline</h2>' +
           '<p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</p>' +
         '</div>' +
-        '<div class="flex items-center gap-2">' +
+        (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
             '<button onclick="setTimelineMode(\'vertical\')" class="' + (!isAngled ? mBtnOn : mBtnOff) + '">⬇ Vertical</button>' +
             '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + (isAngled ? mBtnOn : mBtnOff) + '">↘ Angled</button>' +
@@ -4240,10 +4405,14 @@
           (function(){
             var hasSummary = !!loadExecSummary();
             var summaryOn = hasSummary && isExecSummaryVisible();
-            return '<button onclick="openExecSummaryModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (summaryOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="Add or edit the executive summary">✍ Exec Summary</button>' +
-            (hasSummary ? '<button onclick="toggleExecSummary()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 ' + (summaryOn ? 'text-sky-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500') + ' hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" title="' + (summaryOn ? 'Hide summary' : 'Show summary') + '">' + (summaryOn ? '👁' : '👁') + '</button>' : '');
+            return (hasSummary ? '<button onclick="toggleExecSummary()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (summaryOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="' + (summaryOn ? 'Hide executive summary' : 'Show executive summary') + '">👑 Exec Sum</button>' : '') +
+            '<button onclick="openExecSummaryModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" title="Add or edit the executive summary">👑 Exec Sum Edit</button>';
           })() +
-          '<button onclick="enterPresentation()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">🖥 Presentation</button>' +
+          (containerEl.id !== 'tl-fp-inner' ? '<button onclick="window.enterTimelineFullPage()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">⛶ Full Page</button>' : '') +
+          (containerEl.id === 'tl-fp-inner' ? (function(){
+            var titleOn = !!document.getElementById('tl-fp-title-float');
+            return '<button id="tl-fp-title-btn" onclick="window.fpToggleTitle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">' + (titleOn ? '🏷 Title ✓' : '🏷 Title') + '</button>';
+          })() : '') +
         '</div>' +
       '</div>';
 
@@ -5001,8 +5170,8 @@
       renderTimeline(document.getElementById('timeline-in-tab'));
       renderTimeline(document.getElementById('timeline-in-abcds'));
       renderWorkingTimeline();
-      var pres = document.getElementById('tl-pres-overlay');
-      if (pres) renderPresentation(pres);
+      var fpInner = document.getElementById('tl-fp-inner');
+      if (fpInner) { renderTimeline(fpInner); _fpMoveToolbar(); applyFpTransform(); }
       renderExecSummaryFloat();
     }
 
