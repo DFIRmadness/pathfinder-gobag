@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pathfinder-gobag v0.98 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
+  <title>Pathfinder-gobag v0.98.1rc1 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
 
   <script>
@@ -106,7 +106,7 @@
           <span class="text-base leading-none">🛡️</span>
         </div>
         <div class="leading-tight min-w-0">
-          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.98</span></div>
+          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.98.1rc1</span></div>
           <div class="text-xs text-slate-500 dark:text-slate-400 tracking-wide whitespace-nowrap hidden sm:block">IR &amp; Threat Hunting Workbench · Illuminating the Path in the Data</div>
         </div>
       </div>
@@ -340,7 +340,7 @@
        ================================================================ -->
   <footer class="border-t border-slate-200 dark:border-slate-800 mt-8 py-4">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-500">
-      <span>Pathfinder-gobag v0.98 · All data stored locally in your browser · No telemetry</span>
+      <span>Pathfinder-gobag v0.98.1rc1 · All data stored locally in your browser · No telemetry</span>
       <span class="hidden sm:block">PICERL: SANS Incident Handler's Handbook · ABCs: Melone/Ritter, Microsoft Defender Virtual Ninja Training</span>
     </div>
   </footer>
@@ -1635,6 +1635,17 @@
       if (mp) mp.innerHTML = renderMindPanel(loadBoardMode() === 'mind');
     };
 
+    // Presentation timeline card text size (Vertical + Angled) — independent of
+    // Card Size (S/M/L), which only controls padding/width/height.
+    window.setPresTextSize = function(dir) {
+      var sizes = ['xs', 'sm', 'base', 'lg', 'xl', '2xl'];
+      var cur = parseInt(localStorage.getItem('ir-pres-text-size'), 10);
+      if (isNaN(cur) || cur < 0 || cur >= sizes.length) cur = 2;
+      var next = dir === 'inc' ? Math.min(sizes.length - 1, cur + 1) : Math.max(0, cur - 1);
+      localStorage.setItem('ir-pres-text-size', String(next));
+      renderAllTimelines();
+    };
+
     function loadHiddenIocs() {
       try { return JSON.parse(localStorage.getItem('ir-hidden-iocs') || '[]'); } catch(e) { return []; }
     }
@@ -1817,6 +1828,7 @@
     var editingWorkingTlId     = null;  // id of row being edited in working timeline table
     var tlPendingImages        = [];    // images queued in the Add Event form (not yet saved)
     var editingWorkingTlImages = null;  // copy of ev.images being edited in the current row
+    var editingWorkingTlRowHeight = null; // rendered height (px) of the row right before it entered edit mode
 
     window.openImageLightbox = function(evId, idx) {
       var images;
@@ -1897,6 +1909,52 @@
       tl.forEach(function(ev) {
         if (ev.id === evId) ev.cardOffset = { dx: 0, dy: 0 };
       });
+      saveTimeline(tl);
+      renderAllTimelines();
+    };
+
+    // ── Presentation card resize (Angled mode) ──────────────────────────
+    // Cards are centered on their spine anchor via left:calc(cx% + dx px);
+    // transform:translateX(-50%), and the connector line targets the same
+    // cx%. A symmetric resize-from-center (both edges move opposite,
+    // equal amounts) keeps that anchor fixed, so the connector line needs
+    // no extra recalculation — only the persisted width changes.
+    var cardResizeId = null, cardResizeSide = null, cardResizeStartX = 0, cardResizeStartW = 0;
+    window._cardResizeMouseDown = function(e, evId, side) {
+      e.preventDefault();
+      e.stopPropagation();
+      cardResizeId = evId;
+      cardResizeSide = side;
+      cardResizeStartX = e.clientX;
+      var cardEl = document.querySelector('[data-card-outer="' + evId + '"]');
+      cardResizeStartW = cardEl ? cardEl.getBoundingClientRect().width : 200;
+    };
+    function _cardResizeWidth(e) {
+      var delta = e.clientX - cardResizeStartX;
+      if (cardResizeSide === 'left') delta = -delta;
+      return Math.max(90, Math.min(700, Math.round(cardResizeStartW + delta * 2)));
+    }
+    function _cardResizeMouseMove(e) {
+      if (!cardResizeId) return;
+      var cardEl = document.querySelector('[data-card-outer="' + cardResizeId + '"]');
+      if (cardEl) cardEl.style.width = _cardResizeWidth(e) + 'px';
+    }
+    function _cardResizeMouseUp(e) {
+      if (!cardResizeId) return;
+      var newW = _cardResizeWidth(e);
+      var id = cardResizeId;
+      cardResizeId = null;
+      cardResizeSide = null;
+      var tl = loadTimeline();
+      tl.forEach(function(ev) { if (ev.id === id) ev.cardWidth = newW; });
+      saveTimeline(tl);
+      renderAllTimelines();
+    }
+    window.addEventListener('mousemove', _cardResizeMouseMove);
+    window.addEventListener('mouseup', _cardResizeMouseUp);
+    window.resetCardWidth = function(evId) {
+      var tl = loadTimeline();
+      tl.forEach(function(ev) { if (ev.id === evId) delete ev.cardWidth; });
       saveTimeline(tl);
       renderAllTimelines();
     };
@@ -4488,10 +4546,16 @@
       var cardSize   = localStorage.getItem('ir-card-size') || 'M';
       var showBadges = localStorage.getItem('ir-show-badges') === 'true';
 
-      // Card size CSS for vertical mode
+      // Card size CSS for vertical mode — padding/width/height only; text size is
+      // controlled independently by ir-pres-text-size (A-/A+ buttons)
       var cardPad  = cardSize === 'S' ? 'p-3'  : cardSize === 'L' ? 'p-6'  : 'p-4';
-      var titleCls = cardSize === 'S' ? 'text-sm font-bold'  : cardSize === 'L' ? 'text-xl font-bold'  : 'text-base font-bold';
-      var bodyCls  = cardSize === 'S' ? 'text-xs' : cardSize === 'L' ? 'text-base' : 'text-sm';
+      var presTextSizes = ['xs', 'sm', 'base', 'lg', 'xl', '2xl'];
+      var presTextIdx = parseInt(localStorage.getItem('ir-pres-text-size'), 10);
+      if (isNaN(presTextIdx) || presTextIdx < 0 || presTextIdx >= presTextSizes.length) presTextIdx = 2;
+      var presTitleTextCls = 'text-' + presTextSizes[presTextIdx];
+      var presBodyTextCls  = 'text-' + presTextSizes[Math.max(0, presTextIdx - 1)];
+      var titleCls = presTitleTextCls + ' font-bold';
+      var bodyCls  = presBodyTextCls;
 
       var mBtnBase = 'text-xs font-medium px-3 py-1.5 transition-colors ';
       function mBtnStyle(active) {
@@ -4516,6 +4580,8 @@
             '<button onclick="setTimelineMode(\'vertical\')" class="' + mBtnBase + '" style="' + mBtnStyle(!isAngled) + '">⬇ Vertical</button>' +
             '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(isAngled) + '">↘ Angled</button>' +
           '</div>' +
+          '<button onclick="window.setPresTextSize(\'dec\')" class="text-xs px-1.5 py-0.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 font-bold leading-none transition-colors" style="' + mNeutralStyle + '" title="Decrease card text size">A−</button>' +
+          '<button onclick="window.setPresTextSize(\'inc\')" class="text-xs px-1.5 py-0.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 font-bold leading-none transition-colors" style="' + mNeutralStyle + '" title="Increase card text size">A+</button>' +
           (isAngled ? (function() {
             var stg = localStorage.getItem('ir-angled-stagger') || 'above';
             var nextStg = stg === 'above' ? 'below' : 'above';
@@ -4610,6 +4676,7 @@
         var aChPx    = cardSize === 'S' ? 5.5 : cardSize === 'L' ? 9.0 : 7.0; // px per title char
         var aPadPx   = cardSize === 'S' ? 32  : cardSize === 'L' ? 56  : 40;  // padding + icon/button room
         var aCardWs  = sorted.map(function(ev) {
+          if (ev.cardWidth) return Math.max(90, Math.min(700, ev.cardWidth));
           var iconPx = ev.icon ? (cardSize === 'L' ? 28 : 20) : 0;
           var w = Math.ceil((ev.title || '').length * aChPx) + aPadPx + iconPx;
           return Math.max(aMinW, Math.min(aMaxW, w));
@@ -4835,8 +4902,10 @@
               '</div>' +
             '</div>';
           } else {
-            cardMarkup += '<div style="' + cardStyle + '">' +
-              '<div class="bg-white dark:bg-slate-600 rounded-lg ' + aCardPad + ' border ' + impactBorder + ' shadow-sm text-xs group">' +
+            cardMarkup += '<div class="group" data-card-outer="' + ev.id + '" style="' + cardStyle + '">' +
+              '<div class="absolute inset-y-0 opacity-0 group-hover:opacity-100 transition-opacity bg-sky-400 dark:bg-sky-500" title="Drag to resize" style="left:-4px;width:8px;cursor:ew-resize;border-radius:4px;" onmousedown="window._cardResizeMouseDown(event,\'' + ev.id + '\',\'left\')"></div>' +
+              '<div class="absolute inset-y-0 opacity-0 group-hover:opacity-100 transition-opacity bg-sky-400 dark:bg-sky-500" title="Drag to resize" style="right:-4px;width:8px;cursor:ew-resize;border-radius:4px;" onmousedown="window._cardResizeMouseDown(event,\'' + ev.id + '\',\'right\')"></div>' +
+              '<div class="bg-white dark:bg-slate-600 rounded-lg ' + aCardPad + ' border ' + impactBorder + ' shadow-sm text-xs">' +
                 '<div class="relative mb-1">' +
                   '<div class="flex items-center gap-1">' +
                     (ev.icon ? '<span class="flex-shrink-0">' + escHtml(ev.icon) + '</span>' : '') +
@@ -4854,6 +4923,7 @@
                     '<button onclick="nudgeCard(\'' + ev.id + '\',\'up\')"    title="Move up"    class="text-slate-400 hover:text-sky-500 px-0.5 text-xs leading-none">↑</button>' +
                     '<button onclick="nudgeCard(\'' + ev.id + '\',\'down\')"  title="Move down"  class="text-slate-400 hover:text-sky-500 px-0.5 text-xs leading-none">↓</button>' +
                     (dx !== 0 || dy !== 0 ? '<button onclick="resetCardOffset(\'' + ev.id + '\')" title="Reset position" class="text-amber-400 hover:text-amber-600 px-0.5 text-xs leading-none font-bold">⊙</button>' : '') +
+                    (ev.cardWidth ? '<button onclick="resetCardWidth(\'' + ev.id + '\')" title="Reset width" class="text-amber-400 hover:text-amber-600 px-0.5 text-xs leading-none font-bold">↔</button>' : '') +
                     '<span class="text-slate-200 dark:text-slate-700 px-0.5 text-xs select-none">│</span>' +
                     '<button onclick="toggleEventHidden(\'' + ev.id + '\')" title="Hide" class="text-slate-400 hover:text-slate-600 px-1">🙈</button>' +
                     '<button onclick="editTimelineCard(\'' + ev.id + '\')" title="Edit" class="text-slate-400 hover:text-sky-500 px-1">✏️</button>' +
@@ -4861,8 +4931,8 @@
                     '<button onclick="deleteTimelineCard(\'' + ev.id + '\')" title="Delete" class="text-slate-400 hover:text-red-500 px-1">🗑</button>' +
                   '</div>' +
                 '</div>' +
-                '<p class="font-semibold text-slate-900 dark:text-slate-100 leading-snug">' + escHtml(ev.title) + '</p>' +
-                (ev.body ? '<p class="text-slate-600 dark:text-slate-400 mt-0.5 leading-snug" style="overflow-wrap:anywhere;word-break:break-word">' +
+                '<p class="' + presTitleTextCls + ' font-semibold text-slate-900 dark:text-slate-100 leading-snug">' + escHtml(ev.title) + '</p>' +
+                (ev.body ? '<p class="' + presBodyTextCls + ' text-slate-600 dark:text-slate-400 mt-0.5 leading-snug" style="overflow-wrap:anywhere;word-break:break-word">' +
                   (tlHlOff ? escHtml(ev.body) : renderMindNoteText(ev.body, ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(ev.body))) +
                 '</p>' : '') +
                 (ev.images && ev.images.length && ev.showImagesInPresentation !== false ? renderImageStrip(ev.images, 'pres', ev.id) : '') +
@@ -5137,7 +5207,7 @@
                 '<input type="text" data-wt="source" value="' + escHtml(ev.source || '') + '" placeholder="EDR, SIEM…" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + '">' +
               '</td>' +
               '<td class="' + tdCls + '">' +
-                '<textarea id="wt-edit-body-textarea" data-wt="body" rows="2" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + ' resize-none" placeholder="Description — paste a screenshot here">' + escHtml(ev.body || '') + '</textarea>' +
+                '<textarea id="wt-edit-body-textarea" data-wt="body" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + ' resize-y" style="height:' + (editingWorkingTlRowHeight ? Math.max(60, Math.round(editingWorkingTlRowHeight - 20)) : 60) + 'px" placeholder="Description — paste a screenshot here">' + escHtml(ev.body || '') + '</textarea>' +
                 '<div id="wt-edit-image-strip" class="flex flex-wrap gap-2 mt-2">' + renderImageStripInner(editingWorkingTlImages || [], 'edit') + '</div>' +
                 ((editingWorkingTlImages || []).length
                   ? '<div class="mt-1"><button type="button" onclick="toggleEventImagesInPresentation(\'' + safeId + '\')" ' +
@@ -5163,16 +5233,16 @@
             '</tr>';
           } else {
             h += '<tr class="' + rowBg + ' ' + rowHov + ' cursor-pointer transition-colors" ' +
-              'ondblclick="editWorkingTlRow(\'' + safeId + '\')" title="Double-click to edit">' +
+              'ondblclick="editWorkingTlRow(\'' + safeId + '\', this)" title="Double-click to edit">' +
               '<td class="' + tdCls + ' font-mono whitespace-nowrap">' + escHtml(fmtWtTime(ev.time)) + '</td>' +
               '<td class="' + tdCls + ' text-center">' + escHtml(ev.icon || '') + '</td>' +
               '<td class="' + tdCls + ' font-medium">' + (tlHlOff ? escHtml(ev.title || '') : renderHighlighted(ev.title || '', ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(ev.title || ''), ev.highlightStyles, loadHlColors())) + '</td>' +
               '<td class="' + tdCls + ' text-slate-500 dark:text-slate-400">' + escHtml(ev.source || ev.label || '') + '</td>' +
-              '<td class="' + tdCls + ' text-slate-600 dark:text-slate-400">' +
+              '<td class="' + tdCls + ' text-slate-600 dark:text-slate-400" style="overflow-wrap:anywhere;word-break:break-word">' +
                 (function() {
-                  var snippet = (ev.body || '').slice(0, 120) + (ev.body && ev.body.length > 120 ? '…' : '');
-                  var hl = ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(ev.body || '');
-                  return tlHlOff ? escHtml(snippet) : renderHighlighted(snippet, hl, ev.highlightStyles, loadHlColors());
+                  var full = ev.body || '';
+                  var hl = ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(full);
+                  return tlHlOff ? escHtml(full) : renderHighlighted(full, hl, ev.highlightStyles, loadHlColors());
                 })() +
                 (ev.images && ev.images.length
                   ? renderImageStrip(ev.images, 'view', ev.id) +
@@ -5292,10 +5362,11 @@
       var editRow = document.querySelector('#working-timeline-container .tl-edit-form');
       if (editRow) editRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
     };
-    window.editWorkingTlRow = function(id) {
+    window.editWorkingTlRow = function(id, rowEl) {
       var tl = loadTimeline();
       var ev = tl.filter(function(e) { return e.id === id; })[0];
       editingWorkingTlImages = ev ? (ev.images || []).slice() : [];
+      editingWorkingTlRowHeight = rowEl ? rowEl.getBoundingClientRect().height : null;
       editingWorkingTlId = id;
       renderWorkingTimeline();
     };
@@ -5317,11 +5388,13 @@
       saveTimeline(tl);
       editingWorkingTlImages = null;
       editingWorkingTlId = null;
+      editingWorkingTlRowHeight = null;
       renderAllTimelines();
     };
     window.cancelWorkingTlEdit = function() {
       editingWorkingTlImages = null;
       editingWorkingTlId = null;
+      editingWorkingTlRowHeight = null;
       renderWorkingTimeline();
     };
     window.removePendingImage = function(idx) {
