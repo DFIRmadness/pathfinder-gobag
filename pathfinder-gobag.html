@@ -743,18 +743,25 @@
         if (phase.interactive) {
           var isChecked = checkState[idx] && checkState[idx].checked;
           var ts = isChecked && checkState[idx].ts ? checkState[idx].ts : '';
+          var itemNotes = (checkState[idx] && checkState[idx].notes) || '';
           var checkedBg = isChecked
             ? (phase.isLessons ? 'bg-green-50 dark:bg-green-950 dark:bg-opacity-50' : 'bg-sky-50 dark:bg-sky-950 dark:bg-opacity-50')
             : 'hover:bg-slate-50 dark:hover:bg-slate-800';
-          html += '<label class="flex items-start gap-3 px-3 py-2.5 rounded-lg cursor-pointer ' + checkedBg + ' transition-colors">';
+          html += '<div class="rounded-lg ' + checkedBg + ' transition-colors">';
+          html += '<label class="flex items-start gap-3 px-3 py-2.5 cursor-pointer">';
           html += '<input type="checkbox" data-phase="' + key + '" data-idx="' + idx + '" ' +
             (isChecked ? 'checked' : '') + ' class="mt-0.5 w-4 h-4 rounded flex-shrink-0 cursor-pointer">';
-          html += '<div class="min-w-0">';
+          html += '<div class="min-w-0 flex-1">';
           html += '<span class="text-sm ' + (isChecked
             ? 'line-through text-slate-400 dark:text-slate-600'
             : 'text-slate-900 dark:text-slate-100') + '">' + escHtml(activity) + '</span>';
           if (ts) html += '<div class="text-xs font-medium text-slate-500 dark:text-slate-500 mt-0.5">✓ checked at ' + ts + '</div>';
           html += '</div></label>';
+          html += '<div class="pl-10 pr-3 pb-2">';
+          html += '<input type="text" data-phase-note="' + key + '" data-idx="' + idx + '" value="' + escHtml(itemNotes) + '" placeholder="Add a note…" ' +
+            'class="w-full text-xs rounded border border-transparent hover:border-slate-300 dark:hover:border-slate-600 focus:border-sky-400 dark:focus:border-sky-500 bg-transparent focus:bg-white dark:focus:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 focus:outline-none transition-colors">';
+          html += '</div>';
+          html += '</div>';
         } else {
           html += '<div class="flex items-start gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">';
           html += '<div class="mt-2 w-1.5 h-1.5 rounded-full bg-slate-500 dark:bg-slate-500 flex-shrink-0"></div>';
@@ -818,6 +825,7 @@
           try {
             var rawS  = localStorage.getItem('ir-picerl-' + pKey);
             var state = rawS ? JSON.parse(rawS) : {};
+            var existingNotes = state[idx] && state[idx].notes;
             if (e.target.checked) {
               var now = new Date();
               state[idx] = {
@@ -825,6 +833,9 @@
                 ts: now.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false}) +
                     ' · ' + now.toLocaleDateString('en-US', {month:'short', day:'numeric'})
               };
+              if (existingNotes) state[idx].notes = existingNotes;
+            } else if (existingNotes) {
+              state[idx] = { notes: existingNotes };
             } else {
               delete state[idx];
             }
@@ -832,6 +843,30 @@
           } catch(err) {}
           renderPhaseDetail(pKey);
           renderCycle();
+        });
+      });
+
+      var noteSaveTimer = null;
+      phaseDetailEl.querySelectorAll('input[data-phase-note]').forEach(function(inp) {
+        inp.addEventListener('input', function(e) {
+          var pKey = e.target.dataset.phaseNote;
+          var idx  = parseInt(e.target.dataset.idx, 10);
+          var val  = e.target.value;
+          clearTimeout(noteSaveTimer);
+          noteSaveTimer = setTimeout(function() {
+            try {
+              var rawS  = localStorage.getItem('ir-picerl-' + pKey);
+              var state = rawS ? JSON.parse(rawS) : {};
+              if (val) {
+                state[idx] = state[idx] || {};
+                state[idx].notes = val;
+              } else if (state[idx]) {
+                delete state[idx].notes;
+                if (!state[idx].checked) delete state[idx];
+              }
+              localStorage.setItem('ir-picerl-' + pKey, JSON.stringify(state));
+            } catch(err) {}
+          }, 300);
         });
       });
 

@@ -4,6 +4,8 @@
 
 A single HTML file you grab and go. No install, no server, no account. Open it in a browser and you are working. Everything saves locally in your browser and nothing leaves your machine. Sample files are included that provide 4 threat hunts and an extensive incident for a self-drive demo of all the features this application has to offer.
 
+![Pathfinder-gobag overview](screenshots/01-hero.png)
+
 ---
 
 ## What it is
@@ -17,6 +19,8 @@ Pathfinder-gobag is a practitioner-first workbench for incident responders and t
 ### 1. Incident War Room
 
 A place to digitally track evidence like sticky notes on a whiteboard. Track IOCs, evidence, pivots, and case notes using MIND and ABCs, create and track events in a timeline table, then push chosen events to a presentation ready killchain style timeline.
+
+![Incident War Room — ABCDs evidence board and MIND tracker with IOC highlighting](screenshots/02-warroom.png)
 
 #### MIND IOC Tracker
 
@@ -56,7 +60,7 @@ If auto-detection classifies an indicator incorrectly, click the ⇄ button on a
 
 #### Timeline Anchors and Metrics
 
-A collapsible section holds five timestamp anchors: Compromised, Detected, Contained, Eradicated, and Recovered. These feed the Incident Metrics panel which calculates MTTD, MTTC, MTTE, MTTR, and total incident duration.
+A collapsible section holds five timestamp anchors: Compromised, Detected, Contained, Eradicated, and Recovered. These feed the Incident Metrics panel which calculates MTTD, Time to Contain, Time to Eradicate, MTTR, and total dwell time.
 
 #### Working Timeline
 
@@ -67,6 +71,8 @@ A timeline event builder at the bottom of the War Room lets you compose events f
 ### 2. Incident Timeline
 
 The Incident Timeline tab is the presentation view: a curated, screenshot-ready render of the events you have toggled on in the War Room working timeline. Use this tab for briefings, screenshots into reports, and sharing with leadership. Add and manage events in the War Room.
+
+![Incident Timeline — Angled mode fishbone layout with IOC highlighting and impact markers](screenshots/03-timeline.png)
 
 Two display modes:
 
@@ -101,6 +107,8 @@ Click **Full Page** to render the timeline in a clean, borderless view filling t
 ### 3. Hunting Theory Crafter
 
 A hypothesis-driven threat hunt planner aligned with TaHiTI, PEAK, and SANS FOR508 methodology.
+
+![Hunting Theory Crafter — MITRE ATT&CK technique chain with coverage bar and Push to ABCDs](screenshots/04-hunt.png)
 
 Each hunt theory has:
 
@@ -149,6 +157,8 @@ Chain layout toggles between vertical (full-width cards, detail-focused) and hor
 The SANS PICERL lifecycle as an interactive reference and tracking tool:
 
 **P**reparation · **I**dentification · **C**ontainment · **E**radication · **R**ecovery · **L**essons Learned
+
+![Incident Checklist — SANS PICERL lifecycle with interactive Identification checklist](screenshots/05-checklist.png)
 
 The Identification and Containment phases are fully interactive checklists with pre-loaded SANS-sourced items, checkboxes, timestamps, and a notes field per item. Preparation, Eradication, Recovery, and Lessons Learned are structured reference cards covering what should happen at each phase. Lessons Learned captures sustain and improve observations for the post-incident review.
 
@@ -250,7 +260,7 @@ IOC detection runs automatically on all free-text fields across ABCDs, MIND, Tim
 - **Click a highlight** to cycle through four display styles: coloured background, bold, bold with background, plain
 - **Click 🎨 Colors** in the toolbar to open a per-type colour picker; changes apply live across the entire workbench
 - **Click ⇄ on an IOC chip** to reclassify the indicator if auto-detection got the type wrong; the override is saved and exported with the incident
-- **Click the eye icon** next to an IOC in the IOC panel to hide it from the panel without removing it from the evidence
+- **Click the × button** next to an IOC in the IOC panel to hide it from the panel without removing it from the evidence
 
 ---
 
