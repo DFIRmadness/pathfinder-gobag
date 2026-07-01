@@ -1,18 +1,18 @@
-# Pathfinder-gobag
+# Pathfinder
 
 **The IR and Threat Hunting Workbench: Illuminating the Path in the Data**
 
-🔗 **[Try it live](https://dfirmadness.github.io/pathfinder-gobag/)** — no download required, runs entirely in your browser.
+🔗 **[Try it live](https://dfirmadness.github.io/pathfinder/)** — no download required, runs entirely in your browser.
 
 A single HTML file you grab and go. No install, no server, no account. Open it in a browser and you are working. Everything saves locally in your browser and nothing leaves your machine. Sample files are included that provide 4 threat hunts and an extensive incident for a self-drive demo of all the features this application has to offer.
 
-![Pathfinder-gobag overview](screenshots/01-hero.png)
+![Pathfinder overview](screenshots/01-hero.png)
 
 ---
 
 ## What it is
 
-Pathfinder-gobag is a practitioner-first workbench for incident responders and threat hunters. Four integrated tools in one file, built to support the full arc of an investigation: from initial scoping through hunting, timeline reconstruction, and lessons learned.
+Pathfinder is a practitioner-first workbench for incident responders and threat hunters. Four integrated tools in one file, built to support the full arc of an investigation: from initial scoping through hunting, timeline reconstruction, and lessons learned.
 
 ---
 
@@ -170,7 +170,7 @@ The Identification and Containment phases are fully interactive checklists with 
 
 ### Windows and macOS
 
-1. Download `pathfinder-gobag.html`
+1. Download `pathfinder.html`
 2. Double-click to open in your browser
 3. Type an incident name in the header bar at the top
 4. Start working; all data auto-saves as you type
@@ -179,7 +179,7 @@ The Identification and Containment phases are fully interactive checklists with 
 
 Double-click the file to open it in your browser. Works correctly in Chrome, Chromium, and system-package Firefox.
 
-> **Firefox Flatpak on Wayland note:** If clicks do not register at the correct position, this is a known coordinate mapping issue with Flatpak-sandboxed Firefox and `file://` URLs on Wayland. Fix: run `python3 -m http.server 8080` in the directory and open `http://localhost:8080/pathfinder-gobag.html` instead. Non-Flatpak browsers are unaffected.
+> **Firefox Flatpak on Wayland note:** If clicks do not register at the correct position, this is a known coordinate mapping issue with Flatpak-sandboxed Firefox and `file://` URLs on Wayland. Fix: run `python3 -m http.server 8080` in the directory and open `http://localhost:8080/pathfinder.html` instead. Non-Flatpak browsers are unaffected.
 
 ---
 
