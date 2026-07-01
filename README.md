@@ -289,4 +289,14 @@ The file works fully offline once it has been opened once with internet access (
 
 ---
 
+## Author
+
+**James Smith** ([@DFIRmadness](https://github.com/DFIRmadness)) — creator and maintainer.
+
+## License
+
+[MIT](LICENSE)
+
+---
+
 *Built for the analyst in the field who needs to think clearly under pressure.*
