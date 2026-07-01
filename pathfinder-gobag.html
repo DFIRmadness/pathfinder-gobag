@@ -2267,6 +2267,7 @@
       hdr.style.cssText = 'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid ' + (isDark ? '#334155' : '#e2e8f0') + ';';
       hdr.innerHTML = '<button onclick="window.exitTimelineFullPage()" class="' + btnCls + '">✕ Exit Full Page</button>' +
         '<span style="font-size:0.75rem;color:' + (isDark ? '#94a3b8' : '#475569') + '">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</span>' +
+        '<span style="font-size:0.75rem;color:' + (isDark ? '#64748b' : '#94a3b8') + '">Event cards can be resized by dragging their edges</span>' +
         '<span style="font-size:0.75rem;color:' + (isDark ? '#64748b' : '#94a3b8') + '">Resize browser window for best screenshot</span>' +
         '<div style="margin-left:auto;display:inline-flex;border-radius:8px;border:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';overflow:hidden;">' +
           '<button onclick="window.fpZoomOut()" style="font-size:0.75rem;font-weight:500;padding:4px 10px;background:none;border:none;cursor:pointer;color:' + (isDark ? '#94a3b8' : '#475569') + ';">−</button>' +
@@ -3484,13 +3485,14 @@
           h += '<div class="text-xs text-slate-400 dark:text-slate-600 italic mb-2">Enter an indicator above · also auto-populates from ABCD evidence</div>';
         }
 
-        h += '<div class="flex gap-1">' +
-          '<input type="text" id="mind-add-' + safeKey + '" placeholder="Add IOC or note. Notes are scanned for IOCs" ' +
-            'class="flex-1 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-1 ' + cat.ringCls + ' placeholder-slate-400 dark:placeholder-slate-600" ' +
+        h += '<div class="flex items-start gap-1">' +
+          '<div contenteditable="true" id="mind-add-' + safeKey + '" data-placeholder="Add IOC or note. Notes are scanned for IOCs" ' +
+            'class="flex-1 min-h-[28px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-1 ' + cat.ringCls + ' cursor-text" ' +
+            'style="overflow-wrap:anywhere;word-break:break-word" ' +
             'oninput="window.mindLivePreview(this,\'' + safeKey + '\')" ' +
-            'onkeydown="if(event.key===\'Enter\'){window.addMindEntry(\'' + safeKey + '\',this.value);this.value=\'\'}">' +
+            'onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();window.addMindEntry(\'' + safeKey + '\',this.textContent);this.textContent=\'\'}"></div>' +
           '<button type="button" ' +
-            'onclick="var i=document.getElementById(\'mind-add-' + safeKey + '\');window.addMindEntry(\'' + safeKey + '\',i.value);i.value=\'\'" ' +
+            'onclick="var i=document.getElementById(\'mind-add-' + safeKey + '\');window.addMindEntry(\'' + safeKey + '\',i.textContent);i.textContent=\'\'" ' +
             'class="text-xs font-bold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400">+</button>' +
         '</div>' +
         '<div id="mind-preview-' + safeKey + '" class="hidden mt-1 px-2 py-1.5 rounded border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950 dark:bg-opacity-30 text-xs leading-relaxed"></div>' +
@@ -3635,7 +3637,7 @@
     window.mindLivePreview = function(input, cat) {
       var preview = document.getElementById('mind-preview-' + cat);
       if (!preview) return;
-      var text = input.value;
+      var text = input.textContent;
       var iocs = scanIocs(text);
       if (!text || !iocs.length) {
         preview.innerHTML = '';
@@ -4118,9 +4120,10 @@
           // Always-visible add box — identical pattern to MIND tracker
           var btnCls = 'text-xs font-bold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 leading-none';
           h += '<div class="add-form mt-1" data-cell="' + cellKey + '">' +
-            '<div class="flex gap-1">' +
+            '<div class="flex items-start gap-1">' +
               '<div contenteditable="true" ' +
-                'class="flex-1 min-h-[28px] max-h-20 overflow-y-auto rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:focus:ring-sky-500 leading-relaxed cursor-text" ' +
+                'class="flex-1 min-h-[28px] rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-slate-100 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:focus:ring-sky-500 leading-relaxed cursor-text" ' +
+                'style="overflow-wrap:anywhere;word-break:break-word" ' +
                 'data-placeholder="Add IOC or note. Notes are scanned for IOCs" ' +
                 'data-field="desc" data-cell="' + cellKey + '" ' +
                 'oninput="window.abcdLiveHL(this)" ' +
@@ -4608,7 +4611,7 @@
       h += '<div class="flex flex-wrap items-start justify-between gap-3 mb-6">' +
         '<div>' +
           (containerEl.id === 'tl-fp-inner' ? '' : '<h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">Presentation Timeline</h2>') +
-          (containerEl.id === 'tl-fp-inner' ? '' : '<p class="text-sm text-slate-700 dark:text-slate-300 mt-0.5">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</p>') +
+          (containerEl.id === 'tl-fp-inner' ? '' : '<p class="text-sm text-slate-700 dark:text-slate-300 mt-0.5">Events toggled for presentation · print-ready for screenshots into office applications · event cards can be resized by dragging their edges</p>') +
         '</div>' +
         (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-tab' ? '<div id="tl-tab-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-abcds' ? '<div id="tl-abcds-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
@@ -5228,7 +5231,7 @@
           var rowHov = 'hover:bg-sky-50 dark:hover:bg-slate-600';
 
           if (editingWorkingTlId === ev.id) {
-            h += '<tr class="tl-edit-form bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 ring-2 ring-inset ring-sky-400 dark:ring-sky-600">' +
+            h += '<tr id="wt-row-' + safeId + '" class="tl-edit-form bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 ring-2 ring-inset ring-sky-400 dark:ring-sky-600">' +
               '<td class="' + tdCls + '">' +
                 '<input type="datetime-local" data-wt="time" value="' + escHtml(ev.time || '') + '" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + ' w-44">' +
               '</td>' +
@@ -5267,7 +5270,7 @@
               '</td>' +
             '</tr>';
           } else {
-            h += '<tr class="' + rowBg + ' ' + rowHov + ' cursor-pointer transition-colors" ' +
+            h += '<tr id="wt-row-' + safeId + '" class="' + rowBg + ' ' + rowHov + ' cursor-pointer transition-colors" ' +
               'ondblclick="editWorkingTlRow(\'' + safeId + '\', this)" title="Double-click to edit">' +
               '<td class="' + tdCls + ' font-mono whitespace-nowrap">' + escHtml(fmtWtTime(ev.time)) + '</td>' +
               '<td class="' + tdCls + ' text-center">' + escHtml(ev.icon || '') + '</td>' +
@@ -5297,7 +5300,7 @@
               '</td>' +
               '<td class="px-3 py-2 text-xs border-b border-slate-200 dark:border-slate-600 align-top ' + rowBg + '">' +
                 '<div class="flex gap-1">' +
-                  '<button onclick="event.stopPropagation();editWorkingTlRow(\'' + safeId + '\')" class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Edit">✏️</button>' +
+                  '<button onclick="event.stopPropagation();editWorkingTlRow(\'' + safeId + '\', this.closest(\'tr\'))" class="text-xs px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700" title="Edit">✏️</button>' +
                   '<button onclick="event.stopPropagation();deleteTimelineCard(\'' + safeId + '\')" class="text-xs px-2 py-1 rounded border border-red-200 dark:border-red-900 text-red-400 hover:bg-red-50 dark:hover:bg-red-900 dark:hover:bg-opacity-30" title="Delete">🗑</button>' +
                 '</div>' +
               '</td>' +
@@ -5402,12 +5405,20 @@
       var ev = tl.filter(function(e) { return e.id === id; })[0];
       editingWorkingTlImages = ev ? (ev.images || []).slice() : [];
       editingWorkingTlRowHeight = rowEl ? rowEl.getBoundingClientRect().height : null;
+      var beforeTop = rowEl ? rowEl.getBoundingClientRect().top : null;
       editingWorkingTlId = id;
       renderWorkingTimeline();
+      // Entering edit mode replaces the whole table (icon picker, taller
+      // textareas, image controls all add height), which shifts everything
+      // below the row and breaks the browser's scroll-anchoring. Re-locate
+      // the same row after render and scroll by the delta so the row's
+      // on-screen position doesn't move — only its own height grows.
+      if (beforeTop !== null) restoreRowScrollPosition(id, beforeTop);
     };
     window.saveWorkingTlRow = function(btn, id) {
       var row = btn.closest('tr');
       if (!row) return;
+      var beforeTop = row.getBoundingClientRect().top;
       var get = function(f) { return (row.querySelector('[data-wt="' + f + '"]') || {}).value || ''; };
       var tl = loadTimeline();
       tl.forEach(function(ev) {
@@ -5425,13 +5436,34 @@
       editingWorkingTlId = null;
       editingWorkingTlRowHeight = null;
       renderAllTimelines();
+      restoreRowScrollPosition(id, beforeTop);
     };
     window.cancelWorkingTlEdit = function() {
+      var row = editingWorkingTlId ? document.getElementById('wt-row-' + editingWorkingTlId) : null;
+      var beforeTop = row ? row.getBoundingClientRect().top : null;
+      var id = editingWorkingTlId;
       editingWorkingTlImages = null;
       editingWorkingTlId = null;
       editingWorkingTlRowHeight = null;
       renderWorkingTimeline();
+      if (beforeTop !== null) restoreRowScrollPosition(id, beforeTop);
     };
+    function restoreRowScrollPosition(id, beforeTop) {
+      var compensate = function() {
+        var newRowEl = document.getElementById('wt-row-' + id);
+        if (!newRowEl) return;
+        var afterTop = newRowEl.getBoundingClientRect().top;
+        if (afterTop !== beforeTop) window.scrollBy(0, afterTop - beforeTop);
+      };
+      compensate();
+      // Tailwind's CDN JIT scans and injects CSS for newly-introduced class
+      // combinations asynchronously, not synchronously with the DOM update
+      // (same root cause documented for dark: classes elsewhere in this
+      // file). The icon picker/textareas can still resize a moment after
+      // this render once those styles land, so run a second compensation
+      // pass on the next tick to catch that late shift too.
+      setTimeout(compensate, 0);
+    }
     window.removePendingImage = function(idx) {
       tlPendingImages.splice(idx, 1);
       var area = document.getElementById('wt-pending-images-area');
