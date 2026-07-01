@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pathfinder-gobag v0.99 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
+  <title>Pathfinder-gobag v0.98 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
 
   <script>
@@ -106,7 +106,7 @@
           <span class="text-base leading-none">🛡️</span>
         </div>
         <div class="leading-tight min-w-0">
-          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.99</span></div>
+          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.98</span></div>
           <div class="text-xs text-slate-500 dark:text-slate-400 tracking-wide whitespace-nowrap hidden sm:block">IR &amp; Threat Hunting Workbench · Illuminating the Path in the Data</div>
         </div>
       </div>
@@ -132,9 +132,7 @@
         <button id="btn-paste-event"
           class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400"
           title="Import a single Pathfinder-formatted event shared via chat or email">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Import Single Event
-        </button>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Import Event</button>
         <button id="btn-tz-adjust"
           class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400"
           title="Shift all incident timestamps by a fixed number of hours">
@@ -151,9 +149,7 @@
         <div class="w-px h-5 bg-slate-300 dark:bg-slate-700 mx-1"></div>
         <button id="btn-new-incident"
           class="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border whitespace-nowrap transition-all duration-200 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:text-red-600 dark:hover:text-red-400 hover:border-red-400 dark:hover:border-red-700"
-          title="Clear all incident data and start fresh">
-          ✕ Clear All
-        </button>
+          title="Clear all incident data and start fresh">✕ Clear All</button>
         <button id="btn-theme"
           class="flex items-center justify-center w-9 h-9 rounded-lg border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400"
           aria-label="Toggle theme">
@@ -169,7 +165,7 @@
        ================================================================ -->
   <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 mt-[57px]">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-3">
-      <span class="flex-shrink-0 text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">Incident</span>
+      <span class="flex-shrink-0 text-xs font-bold text-slate-700 dark:text-slate-400 uppercase tracking-widest whitespace-nowrap">Incident Name:</span>
       <div class="flex-1 relative min-w-0">
         <input id="incident-name" type="text"
           placeholder="Enter incident name or ID — e.g. INC-2024-0042 · Suspected ransomware on 3 endpoints"
@@ -324,7 +320,12 @@
          TIMELINE TAB
          ============================================================ -->
     <div id="tab-timeline" class="tab-content hidden">
-      <div id="timeline-in-tab"></div>
+      <div id="tl-tab-toolbar"></div>
+      <div id="tl-tab-pan-outer" style="position:relative;overflow:visible;">
+        <div id="tl-tab-pan-inner" style="transform-origin:0 0;will-change:transform;">
+          <div id="timeline-in-tab"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ============================================================
@@ -341,7 +342,7 @@
        ================================================================ -->
   <footer class="border-t border-slate-200 dark:border-slate-800 mt-8 py-4">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-500">
-      <span>Pathfinder-gobag v0.99 · All data stored locally in your browser · No telemetry</span>
+      <span>Pathfinder-gobag v0.98 · All data stored locally in your browser · No telemetry</span>
       <span class="hidden sm:block">PICERL: SANS Incident Handler's Handbook · ABCs: Melone/Ritter, Microsoft Defender Virtual Ninja Training</span>
     </div>
   </footer>
@@ -856,8 +857,8 @@
     ];
     var ANCHOR_KEYS = ['compromised','detected','contained','eradicated','recovered'];
     var openAnchorPanels = {}; // all collapsed by default
-    var metricsOpen = false; // metrics panel collapsed by default
-    var anchorsGroupOpen = false; // entire anchor+metrics section hidden by default
+    var metricsOpen = true; // open by default
+    var anchorsGroupOpen = true; // open by default; sub-panels remain collapsed
     var ABCD_ICONS = {
       'A': ['🔑','🔐','🪪','👤','👥','🎭','🔓','🛡️','📧','✉️','🎣','🪝'],
       'B': ['🦠','🚪','🐛','⚙️','📁','⏰','🕷️','👻','🎣','🪝','📧','✉️'],
@@ -1530,7 +1531,7 @@
       var h = savedPos ? savedPos.h : 200;
       var panel = document.createElement('div');
       panel.id = 'exec-summary-float';
-      panel.style.cssText = 'position:fixed;z-index:9000;width:' + w + 'px;min-height:' + h + 'px;' +
+      panel.style.cssText = 'position:fixed;z-index:10000;width:' + w + 'px;min-height:' + h + 'px;' +
         'border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.3);' +
         'border:1px solid ' + (isDark ? '#334155' : '#e2e8f0') + ';' +
         'background:' + (isDark ? '#1e293b' : '#fff') + ';' +
@@ -1621,12 +1622,14 @@
     }
     function saveBoardMode(m) { localStorage.setItem('ir-board-mode', m); }
     window.setBoardMode = function(m) { saveBoardMode(m); renderAbcds(); };
-    function loadNoteSize() { return localStorage.getItem('ir-note-size') || 'xs'; }
+    function loadNoteSize() { return localStorage.getItem('ir-note-size') || '[10px]'; }
     window.setNoteSize = function(dir) {
-      var sizes = ['xs','sm','base'], cur = loadNoteSize(), i = sizes.indexOf(cur);
+      var sizes = ['[10px]','xs','sm'], cur = loadNoteSize(), i = sizes.indexOf(cur); if (i < 0) i = 0;
       var next = dir === 'inc' ? Math.min(sizes.length - 1, i + 1) : Math.max(0, i - 1);
       localStorage.setItem('ir-note-size', sizes[next]);
       renderAbcds();
+      var mp = document.getElementById('mind-panel');
+      if (mp) mp.innerHTML = renderMindPanel(loadBoardMode() === 'mind');
     };
 
     function loadHiddenIocs() {
@@ -1762,7 +1765,7 @@
                 id: 'tl-' + entry.id,
                 sourceId: entry.id,
                 sourceType: 'abcd',
-                time: entry.time,
+                time: '',
                 title: entry.title || entry.desc,
                 body: entry.title ? entry.desc : '',
                 highlights: entry.highlights || [],
@@ -1773,15 +1776,15 @@
                 label: l.letter + ' · ' + tf.label,
                 dot: l.dot,
                 badge: l.pill,
-                source: entry.src || '',
+                source: '',
                 showInPresentation: true
               });
               bySource[entry.id] = tl[tl.length - 1];
             } else if (bySource[entry.id]) {
-              // Update synced fields — ABCDs is source of truth for content/time/impact
+              // Update synced fields — ABCDs is source of truth for content/impact
+              // Time is NOT re-synced: analyst sets it directly in the timeline editor
               // Icon is NOT re-synced here: analyst may have overridden it in the timeline editor
               var tlEv = bySource[entry.id];
-              tlEv.time       = entry.time;
               tlEv.title      = entry.title || entry.desc;
               tlEv.body       = entry.title ? entry.desc : '';
               tlEv.impact     = !!entry.impact;
@@ -2017,6 +2020,44 @@
       applyFpTransform();
     };
 
+    // ── Regular timeline tab pan (angled mode only) ────────────────────
+    var tlPanX = 0, tlPanY = 0, tlPanDragging = false, tlPanDragStartX = 0, tlPanDragStartY = 0;
+    function applyTlTransform() {
+      var inner = document.getElementById('tl-tab-pan-inner');
+      var outer = document.getElementById('tl-tab-pan-outer');
+      if (!inner) return;
+      var isAngled = (localStorage.getItem('ir-timeline-mode') || 'vertical') === 'angled';
+      if (!isAngled) { tlPanX = 0; tlPanY = 0; tlPanDragging = false; }
+      inner.style.transform = 'translate(' + tlPanX + 'px,' + tlPanY + 'px)';
+      if (outer) {
+        outer.style.cursor = isAngled ? (tlPanDragging ? 'grabbing' : 'grab') : '';
+        outer.style.userSelect = isAngled ? 'none' : '';
+      }
+    }
+    function _tlMouseDown(e) {
+      if ((localStorage.getItem('ir-timeline-mode') || 'vertical') !== 'angled') return;
+      if (e.target.closest('button,input,textarea,select,a,label')) return;
+      tlPanDragging = true;
+      tlPanDragStartX = e.clientX - tlPanX;
+      tlPanDragStartY = e.clientY - tlPanY;
+      e.preventDefault();
+      var outer = document.getElementById('tl-tab-pan-outer');
+      if (outer) outer.style.cursor = 'grabbing';
+    }
+    function _tlMouseMove(e) {
+      if (!tlPanDragging) return;
+      tlPanX = e.clientX - tlPanDragStartX;
+      tlPanY = e.clientY - tlPanDragStartY;
+      applyTlTransform();
+    }
+    function _tlMouseUp() {
+      if (!tlPanDragging) return;
+      tlPanDragging = false;
+      var isAngled = (localStorage.getItem('ir-timeline-mode') || 'vertical') === 'angled';
+      var outer = document.getElementById('tl-tab-pan-outer');
+      if (outer) outer.style.cursor = isAngled ? 'grab' : '';
+    }
+
     window.fpToggleTitle = function() {
       var existing = document.getElementById('tl-fp-title-float');
       var btn = document.getElementById('tl-fp-title-btn');
@@ -2033,11 +2074,11 @@
       el.style.cssText = 'position:fixed;z-index:10001;cursor:move;user-select:none;' +
         'left:' + (pos ? pos.x : Math.round(window.innerWidth / 2 - 200)) + 'px;' +
         'top:' + (pos ? pos.y : 80) + 'px;' +
-        'background:' + (isDark ? 'rgba(15,23,42,0.92)' : 'rgba(255,255,255,0.92)') + ';' +
-        'color:' + (isDark ? '#f1f5f9' : '#1e293b') + ';' +
+        'background:rgba(15,23,42,0.92);' +
+        'color:#f1f5f9;' +
         'font-size:1.5rem;font-weight:900;line-height:1.15;' +
         'padding:10px 18px;border-radius:8px;' +
-        'box-shadow:0 4px 24px rgba(0,0,0,0.18);';
+        'box-shadow:0 4px 24px rgba(0,0,0,0.35);';
       el.textContent = localStorage.getItem('ir-incident-name') || 'Incident Timeline';
       var tdx = 0, tdy = 0, tdragging = false;
       el.addEventListener('mousedown', function(e) {
@@ -2062,6 +2103,13 @@
       var fpInner = document.getElementById('tl-fp-inner');
       var btns = fpInner ? fpInner.querySelector('#tl-fp-btns-row') : document.getElementById('tl-fp-btns-row');
       if (btns) ctrl.appendChild(btns);
+    }
+    function _tlMoveToolbar() {
+      var toolbar = document.getElementById('tl-tab-toolbar');
+      if (!toolbar) return;
+      toolbar.innerHTML = '';
+      var btns = document.getElementById('tl-tab-btns-row');
+      if (btns) toolbar.appendChild(btns);
     }
 
     window.enterTimelineFullPage = function() {
@@ -2284,7 +2332,6 @@
         if (payload.icon)                     lines.push('Icon:   ' + payload.icon);
         lines.push(                                       'Title:  ' + (payload.title || payload.desc || ''));
         if (payload.title && payload.desc)    lines.push('Notes:  ' + payload.desc);
-        if (payload.src)                      lines.push('Source: ' + payload.src);
       } else {
         if (payload.time)                     lines.push('Time:   ' + payload.time.replace('T',' ').slice(0,16));
         if (payload.icon)                     lines.push('Icon:   ' + payload.icon);
@@ -2367,7 +2414,7 @@
           : 'Timeline (manual event)';
         preview.innerHTML =
           '<div style="border:1px solid #334155;border-radius:0.5rem;padding:0.75rem;font-size:0.75rem;background:#0f172a;margin-bottom:0.25rem">' +
-            (parsed.icon ? '<span style="font-size:1rem;margin-right:0.4rem">' + parsed.icon + '</span>' : '') +
+            (parsed.icon ? '<span style="font-size:1rem;margin-right:0.4rem">' + escHtml(parsed.icon) + '</span>' : '') +
             '<strong style="color:#f8fafc">' + escHtml(parsed.title || parsed.desc || '(no title)') + '</strong>' +
             (parsed.time ? '<span style="color:#94a3b8;margin-left:0.5rem">' + escHtml(parsed.time.replace('T',' ').slice(0,16)) + '</span>' : '') +
             ((parsed.body || (parsed.title && parsed.desc)) ? '<div style="color:#94a3b8;margin-top:0.3rem">' + escHtml(parsed.body || parsed.desc || '') + '</div>' : '') +
@@ -2385,8 +2432,8 @@
           d.cells[cellKey] = d.cells[cellKey] || [];
           var newEntry = {
             id: 'e-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
-            time: parsed.time || '', title: parsed.title || '', desc: parsed.desc || '',
-            src: parsed.src || '', icon: parsed.icon || '', impact: !!parsed.impact,
+            title: parsed.title || '', desc: parsed.desc || '',
+            icon: parsed.icon || '', impact: !!parsed.impact,
             highlights: redetectHighlights((parsed.title || '') + ' ' + (parsed.desc || ''), parsed.highlights), highlightStyles: parsed.highlightStyles || {}
           };
           d.cells[cellKey].push(newEntry);
@@ -2691,7 +2738,7 @@
           pCards += '<div style="' + cardStyle + '">' +
             '<div class="bg-white dark:bg-slate-900 rounded-xl ' + presCardPad + ' border ' + impBorder + ' shadow">' +
               '<div class="flex items-center gap-2 mb-2 min-w-0 overflow-hidden">' +
-                (ev.icon ? '<span class="' + presIconCls + ' leading-none flex-shrink-0">' + ev.icon + '</span>' : '') +
+                (ev.icon ? '<span class="' + presIconCls + ' leading-none flex-shrink-0">' + escHtml(ev.icon) + '</span>' : '') +
                 (ev.badge && showBadges ? '<span class="' + presBadgeCls + ' whitespace-nowrap ' + ev.badge + '">' + escHtml(ev.label) + '</span>' : '') +
               '</div>' +
               '<p class="' + presTitleCls + ' text-slate-900 dark:text-white leading-tight">' + escHtml(ev.title) + '</p>' +
@@ -2741,7 +2788,7 @@
             dotHtml +
             '<div class="bg-white dark:bg-slate-900 rounded-2xl ' + presCardPad + ' border ' + impactBorder + ' shadow-md">' +
               '<div class="flex flex-wrap items-center gap-3 mb-3">' +
-                (ev.icon ? '<span class="' + presIconCls + ' leading-none flex-shrink-0">' + ev.icon + '</span>' : '') +
+                (ev.icon ? '<span class="' + presIconCls + ' leading-none flex-shrink-0">' + escHtml(ev.icon) + '</span>' : '') +
                 '<span class="' + presTimeCls + ' text-slate-700 dark:text-slate-200 whitespace-nowrap">' + escHtml(timeLabel) + '</span>' +
                 (ev.badge && showBadges ? '<span class="' + presBadgeCls + ' whitespace-nowrap ' + ev.badge + '">' + escHtml(ev.label) + '</span>' : '') +
               '</div>' +
@@ -3253,11 +3300,7 @@
               '<div class="text-xs leading-snug mt-0.5 ' + cat.descCls + '">' + escHtml(cat.desc) + '</div>' +
             '</div>' +
             (entries.length ? '<span class="flex-shrink-0 text-xs font-black ' + cat.letterCls + ' opacity-60">' + entries.length + '</span>' : '') +
-            '<div class="flex items-center gap-0.5 flex-shrink-0">' +
-              '<button onclick="window.toggleMindHl()" class="' + noteSzBtnCls + (mindHlOff ? 'opacity-40' : 'text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-600') + '" title="Toggle IOC highlights">🎯</button>' +
-              '<button onclick="window.setNoteSize(\'dec\')" class="' + noteSzBtnCls + '" title="Decrease note text size">A−</button>' +
-              '<button onclick="window.setNoteSize(\'inc\')" class="' + noteSzBtnCls + '" title="Increase note text size">A+</button>' +
-            '</div>' +
+            '<button onclick="window.toggleMindHl()" class="flex-shrink-0 ' + noteSzBtnCls + (mindHlOff ? 'opacity-40' : 'text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-600') + '" title="Toggle IOC highlights">🎯</button>' +
           '</div>' +
         '</div>';
 
@@ -3769,7 +3812,7 @@
       var modeBtnOff = modeBtnBase + 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700';
       var noteSzBtnCls = 'text-xs px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-sky-400 dark:hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 font-bold leading-none transition-colors ';
       h += '<div class="flex items-center gap-2 mb-3">' +
-        '<span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Evidence Board</span>' +
+        '<span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Evidence and Pivots Board</span>' +
         '<div class="flex items-center gap-1 ml-auto">' +
           '<button onclick="window.toggleAbcdHl()" class="' + noteSzBtnCls + (abcdHlOff ? 'opacity-40' : 'text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-600') + '" title="Toggle IOC highlights">🎯</button>' +
           '<button onclick="window.setNoteSize(\'dec\')" class="' + noteSzBtnCls + '" title="Decrease note text size">A−</button>' +
@@ -3872,10 +3915,6 @@
                 '</div>' +
                 '<div class="optional-details hidden space-y-1.5">' +
                   ePickerH +
-                  '<label class="' + eLbl + '">Time</label>' +
-                  '<input type="datetime-local" data-field="edit-time" value="' + escHtml(entry.time || '') + '" class="' + eCls + '">' +
-                  '<label class="' + eLbl + '">Source</label>' +
-                  '<input type="text" data-field="edit-src" value="' + escHtml(entry.src || '') + '" placeholder="e.g. EDR, SIEM" class="' + eCls + '">' +
                   '<label class="flex items-center gap-1.5 mt-1 cursor-pointer">' +
                     '<input type="checkbox" data-field="edit-impact"' + (entry.impact ? ' checked' : '') + ' class="accent-amber-500">' +
                     '<span>💥 Impact event</span>' +
@@ -3893,11 +3932,11 @@
               var hlArr = entry.highlights || [];
               var entryText = entry.desc || entry.title || '';
               h += '<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2 mb-1.5 ' + noteSize + ' leading-relaxed" style="overflow-wrap:anywhere;word-break:break-word">' +
+                (entry.inTimeline ? '<div class="flex items-center gap-2 mb-1.5 pb-1 border-b border-slate-100 dark:border-slate-800">' +
+                  '<span class="text-emerald-500 dark:text-emerald-400" title="Synced to timeline">🔗</span>' +
+                '</div>' : '') +
                 (abcdHlOff ? escHtml(entryText) : renderMindNoteText(entryText, hlArr)) +
                 '<div class="flex items-center gap-2 mt-1.5 pt-1 border-t border-slate-100 dark:border-slate-800">' +
-                  (entry.time ? '<span class="font-mono text-slate-400 dark:text-slate-500">' + formatAbcdTime(entry.time) + '</span>' : '') +
-                  (entry.src  ? '<span class="px-1 py-0 rounded text-slate-400 dark:text-slate-500">' + escHtml(entry.src) + '</span>' : '') +
-                  (entry.inTimeline ? '<span class="text-emerald-500 dark:text-emerald-400" title="Synced to timeline">🔗</span>' : '') +
                   '<button type="button" data-action="edit-entry" data-cell="' + cellKey + '" data-id="' + escHtml(entry.id) + '" ' +
                     'class="text-xs text-slate-400 dark:text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 transition-colors">✏️ edit</button>' +
                   '<button type="button" data-action="share-entry" data-cell="' + cellKey + '" data-id="' + escHtml(entry.id) + '" ' +
@@ -4271,10 +4310,8 @@
               (en.highlights || []).forEach(function(hl) {
                 if (!newHL.includes(hl) && editedDesc.indexOf(hl) !== -1) newHL.push(hl);
               });
-              en.time       = get('edit-time');
               en.title      = '';
               en.desc       = editedDesc;
-              en.src        = get('edit-src').trim();
               en.icon       = ((form && form.querySelector('[data-field="icon"]')) ? form.querySelector('[data-field="icon"]').value : '').trim();
               en.impact     = !!(form && form.querySelector('[data-field="edit-impact"]') && form.querySelector('[data-field="edit-impact"]').checked);
               en.highlights = newHL;
@@ -4305,8 +4342,8 @@
           var label = (ltr ? ltr.letter : '') + (tfrm ? ' · ' + tfrm.label : '');
           var payload = {
             cell: cellKey, label: label,
-            title: entry.title || '', desc: entry.desc || '', src: entry.src || '',
-            time: entry.time || '', icon: entry.icon || '', impact: !!entry.impact,
+            title: entry.title || '', desc: entry.desc || '',
+            icon: entry.icon || '', impact: !!entry.impact,
             highlights: entry.highlights || [], highlightStyles: entry.highlightStyles || {}
           };
           var text = buildEventShareText('abcd', payload);
@@ -4387,7 +4424,7 @@
           '<h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">Presentation Timeline</h2>' +
           '<p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</p>' +
         '</div>' +
-        (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
+        (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-tab' ? '<div id="tl-tab-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
             '<button onclick="setTimelineMode(\'vertical\')" class="' + (!isAngled ? mBtnOn : mBtnOff) + '">⬇ Vertical</button>' +
             '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + (isAngled ? mBtnOn : mBtnOff) + '">↘ Angled</button>' +
@@ -4430,26 +4467,25 @@
           (function(){
             var hasSummary = !!loadExecSummary();
             var summaryOn = hasSummary && isExecSummaryVisible();
+            var titleOn = !!document.getElementById('tl-fp-title-float');
             return (hasSummary ? '<button onclick="toggleExecSummary()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (summaryOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="' + (summaryOn ? 'Hide executive summary' : 'Show executive summary') + '">👑 Exec Sum</button>' : '') +
+            (containerEl.id === 'tl-fp-inner' || containerEl.id === 'timeline-in-tab' ? '<button id="tl-fp-title-btn" onclick="window.fpToggleTitle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (titleOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="Toggle draggable incident title">🏷 Title</button>' : '') +
             '<button onclick="openExecSummaryModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" title="Add or edit the executive summary">👑 Exec Sum Edit</button>';
           })() +
           (containerEl.id !== 'tl-fp-inner' ? '<button onclick="window.enterTimelineFullPage()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">⛶ Full Page</button>' : '') +
-          (containerEl.id === 'tl-fp-inner' ? (function(){
-            var titleOn = !!document.getElementById('tl-fp-title-float');
-            return '<button id="tl-fp-title-btn" onclick="window.fpToggleTitle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">' + (titleOn ? '🏷 Title ✓' : '🏷 Title') + '</button>';
-          })() : '') +
         '</div>' +
-      '</div>';
+      '</div>' +
+      (containerEl.id === 'tl-fp-inner' ? '<div style="height:60px"></div>' : '');
 
       // ── Vertical mode: inline executive summary box ───────────────────────
       if (!isAngled && loadExecSummary() && isExecSummaryVisible()) {
         var esTxt = loadExecSummary();
         h += '<div class="rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 mb-6 overflow-hidden">' +
-          '<div class="flex items-center justify-between px-4 py-2.5 bg-slate-700 dark:bg-slate-900">' +
-            '<span class="font-bold text-white text-sm tracking-wide">Executive Summary</span>' +
+          '<div class="flex items-center justify-between px-4 py-2.5 bg-slate-200 dark:bg-slate-900">' +
+            '<span class="font-bold text-slate-800 dark:text-white text-sm tracking-wide">Executive Summary</span>' +
             '<div class="flex items-center gap-2">' +
-              '<button onclick="openExecSummaryModal()" class="text-xs text-slate-300 hover:text-white transition-colors" title="Edit">✏ Edit</button>' +
-              '<button onclick="toggleExecSummary()" class="text-xs text-slate-300 hover:text-white transition-colors" title="Hide">× Hide</button>' +
+              '<button onclick="openExecSummaryModal()" class="text-xs text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors" title="Edit">✏ Edit</button>' +
+              '<button onclick="toggleExecSummary()" class="text-xs text-slate-500 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors" title="Hide">× Hide</button>' +
             '</div>' +
           '</div>' +
           '<div class="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">' + escHtml(esTxt) + '</div>' +
@@ -4839,7 +4875,7 @@
               '<div class="bg-white dark:bg-slate-600 rounded-lg ' + cardPad + ' border ' + impactBorder + ' shadow-sm group">' +
                 '<div class="flex items-start justify-between gap-2">' +
                   '<div class="flex flex-wrap items-center gap-2 mb-2 flex-1 min-w-0">' +
-                    (ev.icon ? '<span class="text-lg flex-shrink-0">' + ev.icon + '</span>' : '') +
+                    (ev.icon ? '<span class="text-lg flex-shrink-0">' + escHtml(ev.icon) + '</span>' : '') +
                     '<span class="text-sm font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">' + escHtml(timeLabel) + '</span>' +
                     (ev.badge ? '<span onclick="toggleTimelineLabel(\'' + ev.id + '\')" title="' + escHtml(ev.label) + '" class="text-xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap cursor-pointer select-none ' + ev.badge + '">' + escHtml(expandedLabels[ev.id] ? ev.label : ev.label.split(' ')[0]) + '</span>' : '') +
                   '</div>' +
@@ -5191,6 +5227,8 @@
 
     function renderAllTimelines() {
       renderTimeline(document.getElementById('timeline-in-tab'));
+      _tlMoveToolbar();
+      applyTlTransform();
       renderTimeline(document.getElementById('timeline-in-abcds'));
       renderWorkingTimeline();
       var fpInner = document.getElementById('tl-fp-inner');
@@ -6019,7 +6057,6 @@
               if (e.icon) parts.push(e.icon);
               parts.push((e.title || e.desc || '').replace(/\n/g,' '));
               if (e.title && e.desc) parts.push('— ' + e.desc.replace(/\n/g,' '));
-              if (e.src) parts.push('*('+e.src+')*');
               if (e.impact) parts.push('💥');
               L.push('- ' + parts.join(' '));
             });
@@ -6155,9 +6192,6 @@
       ABCD_LETTERS.forEach(function(l) {
         ABCD_TIMEFRAMES.forEach(function(tf) {
           var cellKey = l.letter + '-' + tf.key;
-          (abcds.cells[cellKey] || []).forEach(function(entry) {
-            entry.time = shiftTimeStr(entry.time, hours);
-          });
         });
       });
       saveAbcds(abcds);
@@ -6222,6 +6256,14 @@
 
     document.getElementById('btn-tz-adjust').addEventListener('click', openTzAdjustModal);
 
+    // ── Regular timeline tab pan handlers ──────────────────────────────
+    (function() {
+      var panOuter = document.getElementById('tl-tab-pan-outer');
+      if (panOuter) panOuter.addEventListener('mousedown', _tlMouseDown);
+      window.addEventListener('mousemove', _tlMouseMove);
+      window.addEventListener('mouseup', _tlMouseUp);
+    })();
+
     // ── Smart Import ───────────────────────────────────────────────────
     function normaliseTitle(t) { return (t || '').trim().toLowerCase(); }
     function minuteKey(timeStr) { return (timeStr || '').slice(0, 16); }
@@ -6229,7 +6271,8 @@
     function applyImportBundle(bundle) {
       var NON_TL = DATA_KEYS.filter(function(k) { return k !== 'ir-timeline'; });
       NON_TL.forEach(function(k) {
-        if (bundle.data[k] !== undefined) localStorage.setItem(k, JSON.stringify(bundle.data[k]));
+        var v = bundle.data[k];
+        if (v !== undefined) localStorage.setItem(k, typeof v === 'string' ? v : JSON.stringify(v));
       });
       var inc = document.getElementById('incident-name');
       if (inc && bundle.data['ir-incident-name']) inc.value = bundle.data['ir-incident-name'];
@@ -6257,7 +6300,7 @@
           ABCD_TIMEFRAMES.forEach(function(tf) {
             var cellKey = l.letter + '-' + tf.key;
             (abcdsData.cells[cellKey] || []).forEach(function(entry) {
-              entry.highlights = redetectHighlights((entry.title || entry.desc || ''), entry.highlights);
+              entry.highlights = redetectHighlights((entry.title || '') + ' ' + (entry.desc || ''), entry.highlights);
             });
           });
         });
