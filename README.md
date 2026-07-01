@@ -268,7 +268,7 @@ The file works fully offline once it has been opened once with internet access (
 ## Framework credits
 
 - **ABCs of Incident Response** — Mike Melone, Microsoft Defender Virtual Ninja Training ([watch the video](https://youtu.be/TTqFlnlwch0?si=hSDYUJe3Ywi4dCGK))
-- **MIND Framework** — Patterson Cake ([securecake.com](https://securecake.com/f/mind-your-iocs))
+- **MIND Framework** — Patterson Cake ([securecake.com](https://securecake.com/f/mind-your-iocs)) ([Rapid Incident Response video](https://www.youtube.com/live/XfUjST9kXdU?si=1ykMZNeV9NQCk40B))
 - **PICERL lifecycle** — SANS Incident Handler's Handbook
 - **MITRE ATT&CK** — MITRE Corporation
 - **TaHiTI** — ING / Fox-IT threat hunting methodology
