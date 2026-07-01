@@ -244,7 +244,8 @@
       <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-6">
         <h2 class="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">Incident War Room</h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">A structured set of guides to keep analysts focused on finding the data necessary to track and contain the adversary.</p>
-        <p class="text-sm text-slate-600 dark:text-slate-400 mb-6">Framework by Mike Melone · Microsoft Defender Virtual Ninja Training · Map evidence across 3 timeframes ·
+        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ABCs of Incident Response</span>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-6">Framework by Mike Melone · Microsoft Defender Virtual Ninja Training · Map evidence across 3 timeframes ·
           <a href="https://youtu.be/TTqFlnlwch0?si=hSDYUJe3Ywi4dCGK" target="_blank" rel="noopener noreferrer"
             class="text-sky-600 dark:text-sky-400 hover:underline">Watch the training video ↗</a></p>
 
@@ -271,12 +272,12 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-2 mb-3">
-          <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MIND Framework</span>
-          <span class="text-slate-300 dark:text-slate-600">·</span>
+        <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MIND Framework</span>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-1 mb-3">Framework by
           <a href="https://securecake.com/f/mind-your-iocs" target="_blank" rel="noopener noreferrer"
-            class="text-xs text-slate-400 dark:text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 underline">by Patterson Cake · securecake.com ↗</a>
-        </div>
+            class="hover:underline">Patterson Cake · securecake.com ↗</a> ·
+          <a href="https://www.youtube.com/live/XfUjST9kXdU?si=1ykMZNeV9NQCk40B" target="_blank" rel="noopener noreferrer"
+            class="text-sky-600 dark:text-sky-400 hover:underline">Watch the Rapid Incident Response video ↗</a></p>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <div class="rounded-xl border-2 border-purple-400 border-opacity-50 bg-purple-50 dark:bg-purple-950 dark:bg-opacity-40 p-3 text-center">
             <div class="text-2xl font-black text-purple-600 dark:text-purple-400 mb-1">M</div>
@@ -312,6 +313,7 @@
           <svg class="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           Presentation Timeline
         </h3>
+        <div id="tl-abcds-toolbar"></div>
         <div id="timeline-in-abcds"></div>
       </div>
     </div>
@@ -321,11 +323,7 @@
          ============================================================ -->
     <div id="tab-timeline" class="tab-content hidden">
       <div id="tl-tab-toolbar"></div>
-      <div id="tl-tab-pan-outer" style="position:relative;overflow:visible;">
-        <div id="tl-tab-pan-inner" style="transform-origin:0 0;will-change:transform;">
-          <div id="timeline-in-tab"></div>
-        </div>
-      </div>
+      <div id="timeline-in-tab"></div>
     </div>
 
     <!-- ============================================================
@@ -492,15 +490,20 @@
 
     // ── Theme ──────────────────────────────────────────────────────────
     function isDark() { return root.classList.contains('dark'); }
-    function applyTheme(dark) {
+    function applyTheme(dark, isInitialLoad) {
       root.classList.toggle('dark', dark);
       iconSun.classList.toggle('hidden', !dark);
       iconMoon.classList.toggle('hidden', dark);
       try { localStorage.setItem('ir-theme', dark ? 'dark' : 'light'); } catch(e) {}
+      if (isInitialLoad) return; // other top-level consts/renders aren't set up yet this early
       if (typeof renderExecSummaryFloat === 'function') renderExecSummaryFloat();
+      // Timeline toolbar buttons use JS-computed inline colors (not Tailwind
+      // dark: classes, which the CDN JIT can fail to re-evaluate on a live
+      // theme toggle) — re-render so they pick up the new theme immediately.
+      if (typeof renderAllTimelines === 'function') renderAllTimelines();
     }
     btnTheme.addEventListener('click', function() { applyTheme(!isDark()); });
-    applyTheme(isDark());
+    applyTheme(isDark(), true);
 
     // ── Incident name ──────────────────────────────────────────────────
     try {
@@ -1781,15 +1784,16 @@
               });
               bySource[entry.id] = tl[tl.length - 1];
             } else if (bySource[entry.id]) {
-              // Update synced fields — ABCDs is source of truth for content/impact
-              // Time is NOT re-synced: analyst sets it directly in the timeline editor
-              // Icon is NOT re-synced here: analyst may have overridden it in the timeline editor
+              // Update synced fields — ABCDs is source of truth for impact only.
+              // Time is NOT re-synced: analyst sets it directly in the timeline editor.
+              // Icon is NOT re-synced here: analyst may have overridden it in the timeline editor.
+              // Title/body/highlights are NOT re-synced here either, same reason: once
+              // created, they're analyst-editable in the Timeline tab, and the ABCD note's
+              // short pivot text scans for different IOCs than the full timeline body —
+              // re-syncing would clobber a correct timeline-side detection with an
+              // incomplete or different one from the shorter ABCD text.
               var tlEv = bySource[entry.id];
-              tlEv.title      = entry.title || entry.desc;
-              tlEv.body       = entry.title ? entry.desc : '';
-              tlEv.impact     = !!entry.impact;
-              tlEv.highlights      = entry.highlights || [];
-              tlEv.highlightStyles = entry.highlightStyles || {};
+              tlEv.impact = !!entry.impact;
             }
             // else: suppressed and not in timeline — skip silently
           });
@@ -2020,28 +2024,29 @@
       applyFpTransform();
     };
 
-    // ── Regular timeline tab pan (angled mode only) ────────────────────
+    // ── Regular timeline tab pan — scoped to the spine+cards canvas only,
+    //    not the heading/subtitle/exec-summary (angled mode only) ────────
     var tlPanX = 0, tlPanY = 0, tlPanDragging = false, tlPanDragStartX = 0, tlPanDragStartY = 0;
     function applyTlTransform() {
-      var inner = document.getElementById('tl-tab-pan-inner');
-      var outer = document.getElementById('tl-tab-pan-outer');
-      if (!inner) return;
       var isAngled = (localStorage.getItem('ir-timeline-mode') || 'vertical') === 'angled';
       if (!isAngled) { tlPanX = 0; tlPanY = 0; tlPanDragging = false; }
-      inner.style.transform = 'translate(' + tlPanX + 'px,' + tlPanY + 'px)';
+      var inner = document.getElementById('timeline-in-tab-canvas-inner');
+      var outer = document.getElementById('timeline-in-tab-canvas-outer');
+      if (inner) inner.style.transform = 'translate(' + tlPanX + 'px,' + tlPanY + 'px)';
       if (outer) {
-        outer.style.cursor = isAngled ? (tlPanDragging ? 'grabbing' : 'grab') : '';
-        outer.style.userSelect = isAngled ? 'none' : '';
+        outer.style.cursor = tlPanDragging ? 'grabbing' : 'grab';
+        outer.style.userSelect = 'none';
+        outer.style.overflow = 'hidden';
+        outer.onmousedown = _tlMouseDown;
       }
     }
     function _tlMouseDown(e) {
-      if ((localStorage.getItem('ir-timeline-mode') || 'vertical') !== 'angled') return;
       if (e.target.closest('button,input,textarea,select,a,label')) return;
       tlPanDragging = true;
       tlPanDragStartX = e.clientX - tlPanX;
       tlPanDragStartY = e.clientY - tlPanY;
       e.preventDefault();
-      var outer = document.getElementById('tl-tab-pan-outer');
+      var outer = document.getElementById('timeline-in-tab-canvas-outer');
       if (outer) outer.style.cursor = 'grabbing';
     }
     function _tlMouseMove(e) {
@@ -2053,9 +2058,52 @@
     function _tlMouseUp() {
       if (!tlPanDragging) return;
       tlPanDragging = false;
+      var outer = document.getElementById('timeline-in-tab-canvas-outer');
+      if (outer) outer.style.cursor = 'grab';
+    }
+
+    // ── War Room embedded Presentation Timeline pan — same scoping ──────
+    var abPanX = 0, abPanY = 0, abPanDragging = false, abPanDragStartX = 0, abPanDragStartY = 0;
+    function applyAbTransform() {
       var isAngled = (localStorage.getItem('ir-timeline-mode') || 'vertical') === 'angled';
-      var outer = document.getElementById('tl-tab-pan-outer');
-      if (outer) outer.style.cursor = isAngled ? 'grab' : '';
+      if (!isAngled) { abPanX = 0; abPanY = 0; abPanDragging = false; }
+      var inner = document.getElementById('timeline-in-abcds-canvas-inner');
+      var outer = document.getElementById('timeline-in-abcds-canvas-outer');
+      if (inner) inner.style.transform = 'translate(' + abPanX + 'px,' + abPanY + 'px)';
+      if (outer) {
+        outer.style.cursor = abPanDragging ? 'grabbing' : 'grab';
+        outer.style.userSelect = 'none';
+        outer.style.overflow = 'hidden';
+        outer.onmousedown = _abMouseDown;
+      }
+    }
+    function _abMouseDown(e) {
+      if (e.target.closest('button,input,textarea,select,a,label')) return;
+      abPanDragging = true;
+      abPanDragStartX = e.clientX - abPanX;
+      abPanDragStartY = e.clientY - abPanY;
+      e.preventDefault();
+      var outer = document.getElementById('timeline-in-abcds-canvas-outer');
+      if (outer) outer.style.cursor = 'grabbing';
+    }
+    function _abMouseMove(e) {
+      if (!abPanDragging) return;
+      abPanX = e.clientX - abPanDragStartX;
+      abPanY = e.clientY - abPanDragStartY;
+      applyAbTransform();
+    }
+    function _abMouseUp() {
+      if (!abPanDragging) return;
+      abPanDragging = false;
+      var outer = document.getElementById('timeline-in-abcds-canvas-outer');
+      if (outer) outer.style.cursor = 'grab';
+    }
+    function _abMoveToolbar() {
+      var toolbar = document.getElementById('tl-abcds-toolbar');
+      if (!toolbar) return;
+      toolbar.innerHTML = '';
+      var btns = document.getElementById('tl-abcds-btns-row');
+      if (btns) toolbar.appendChild(btns);
     }
 
     window.fpToggleTitle = function() {
@@ -2125,6 +2173,7 @@
       var hdr = document.createElement('div');
       hdr.style.cssText = 'flex-shrink:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid ' + (isDark ? '#334155' : '#e2e8f0') + ';';
       hdr.innerHTML = '<button onclick="window.exitTimelineFullPage()" class="' + btnCls + '">✕ Exit Full Page</button>' +
+        '<span style="font-size:0.75rem;color:' + (isDark ? '#94a3b8' : '#475569') + '">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</span>' +
         '<span style="font-size:0.75rem;color:' + (isDark ? '#64748b' : '#94a3b8') + '">Resize browser window for best screenshot</span>' +
         '<div style="margin-left:auto;display:inline-flex;border-radius:8px;border:1px solid ' + (isDark ? '#475569' : '#cbd5e1') + ';overflow:hidden;">' +
           '<button onclick="window.fpZoomOut()" style="font-size:0.75rem;font-weight:500;padding:4px 10px;background:none;border:none;cursor:pointer;color:' + (isDark ? '#94a3b8' : '#475569') + ';">−</button>' +
@@ -2742,7 +2791,7 @@
                 (ev.badge && showBadges ? '<span class="' + presBadgeCls + ' whitespace-nowrap ' + ev.badge + '">' + escHtml(ev.label) + '</span>' : '') +
               '</div>' +
               '<p class="' + presTitleCls + ' text-slate-900 dark:text-white leading-tight">' + escHtml(ev.title) + '</p>' +
-              (ev.body ? '<p class="' + presBodyCls + ' text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">' + renderHighlighted(ev.body, ev.highlights, ev.highlightStyles, loadHlColors()) + '</p>' : '') +
+              (ev.body ? '<p class="' + presBodyCls + ' text-slate-600 dark:text-slate-300 mt-2 leading-relaxed">' + (tlHlOff ? escHtml(ev.body) : renderHighlighted(ev.body, ev.highlights, ev.highlightStyles, loadHlColors())) + '</p>' : '') +
               (ev.images && ev.images.length && ev.showImagesInPresentation !== false ? renderImageStrip(ev.images, 'pres', ev.id) : '') +
               '<p class="' + presTimeCls + ' text-slate-500 dark:text-slate-400 mt-2 font-mono">' + escHtml(timeLabel) + '</p>' +
             '</div>' +
@@ -2793,7 +2842,7 @@
                 (ev.badge && showBadges ? '<span class="' + presBadgeCls + ' whitespace-nowrap ' + ev.badge + '">' + escHtml(ev.label) + '</span>' : '') +
               '</div>' +
               '<p class="' + presTitleCls + ' text-slate-900 dark:text-white leading-tight">' + escHtml(ev.title) + '</p>' +
-              (ev.body ? '<p class="' + presBodyCls + ' text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">' + renderHighlighted(ev.body, ev.highlights, ev.highlightStyles, loadHlColors()) + '</p>' : '') +
+              (ev.body ? '<p class="' + presBodyCls + ' text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">' + (tlHlOff ? escHtml(ev.body) : renderHighlighted(ev.body, ev.highlights, ev.highlightStyles, loadHlColors())) + '</p>' : '') +
               (ev.images && ev.images.length && ev.showImagesInPresentation !== false ? renderImageStrip(ev.images, 'pres', ev.id) : '') +
             '</div>' +
           '</div>';
@@ -2912,7 +2961,7 @@
       { re: /\b[0-9a-f]{40}\b/gi,                                                                                                                                 type: 'SHA1',    emoji: '#️⃣' },
       { re: /\b[0-9a-f]{32}\b/gi,                                                                                                                                 type: 'MD5',     emoji: '#️⃣' },
       { re: /\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b/g,                                                                               type: 'Phone',   emoji: '📞' },
-      { re: /\bhost:([a-zA-Z0-9][a-zA-Z0-9\-\.]{0,61}[a-zA-Z0-9]|[a-zA-Z0-9])(?=[^a-zA-Z0-9\-\.]|$)/g,                                                         type: 'Host',    emoji: '🖥️' }
+      { re: /\bhost:([a-zA-Z0-9][a-zA-Z0-9\-\.]{0,61}[a-zA-Z0-9]|[a-zA-Z0-9])(?=[^a-zA-Z0-9\-\.]|\.(?![a-zA-Z0-9])|$)/g,                                          type: 'Host',    emoji: '🖥️' }
     ];
 
     var HL_STYLES    = ['highlight', 'bold', 'bold-highlight', 'plain'];
@@ -3069,8 +3118,11 @@
     };
 
     function renderHlColorPicker() {
+      // Inline style rather than Tailwind dark: classes — see note in renderTimeline().
+      var isDarkNow = document.documentElement.classList.contains('dark');
+      var style = 'background-color:' + (isDarkNow ? '#1e293b' : '#ffffff') + ';color:' + (isDarkNow ? '#cbd5e1' : '#334155') + ';';
       return '<button type="button" onclick="toggleHlColorPanel(this)" ' +
-        'class="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">' +
+        'class="flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" style="' + style + '">' +
         '🎨 Colors' +
       '</button>';
     }
@@ -3544,10 +3596,32 @@
         saveMind(mind2);
         renderAbcds();
       }
+      function cancel() {
+        if (saved) return;
+        saved = true;
+        renderAbcds();
+      }
       ta.addEventListener('blur', save);
-      ta.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') { ev.preventDefault(); renderAbcds(); } });
+      ta.addEventListener('keydown', function(ev) { if (ev.key === 'Escape') { ev.preventDefault(); cancel(); } });
+      var btnRow = document.createElement('div');
+      btnRow.className = 'flex gap-1 mt-1';
+      var saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.title = 'Save';
+      saveBtn.textContent = '✓';
+      saveBtn.className = 'text-xs px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-700 text-white';
+      saveBtn.addEventListener('mousedown', function(ev) { ev.preventDefault(); save(); });
+      var cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.title = 'Cancel';
+      cancelBtn.textContent = '✕';
+      cancelBtn.className = 'text-xs px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700';
+      cancelBtn.addEventListener('mousedown', function(ev) { ev.preventDefault(); cancel(); });
+      btnRow.appendChild(saveBtn);
+      btnRow.appendChild(cancelBtn);
       noteEl.innerHTML = '';
       noteEl.appendChild(ta);
+      noteEl.appendChild(btnRow);
       ta.focus();
     };
 
@@ -3921,8 +3995,8 @@
                   '</label>' +
                 '</div>' +
                 '<div class="flex gap-1 mt-2">' +
-                  '<button class="flex-1 text-xs font-semibold py-1 rounded bg-sky-600 hover:bg-sky-700 text-white" ' +
-                    'data-action="save-edit-entry" data-cell="' + cellKey + '" data-id="' + escHtml(entry.id) + '">Save</button>' +
+                  '<button class="flex-1 text-xs font-semibold py-1 rounded bg-sky-600 hover:bg-sky-700 text-white" title="Save" ' +
+                    'data-action="save-edit-entry" data-cell="' + cellKey + '" data-id="' + escHtml(entry.id) + '">✓</button>' +
                   '<button class="flex-1 text-xs font-semibold py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" ' +
                     'data-action="cancel-edit-entry">✕</button>' +
                 '</div>' +
@@ -4389,6 +4463,16 @@
     // affecting the source evidence.
     function renderTimeline(containerEl) {
       if (!containerEl) return;
+      // Tailwind's CDN JIT can "bake in" dark: variants for utility classes it
+      // discovers for the first time while html.dark happens to be set, and
+      // won't reliably re-evaluate them on a later theme toggle without a
+      // full reload. Toolbar button neutral fill/text use inline styles
+      // computed here instead, matching the existing isDark()-based approach
+      // used elsewhere in this file (e.g. spine colors) for the same reason.
+      var isDarkNow   = document.documentElement.classList.contains('dark');
+      var mNeutralBg  = isDarkNow ? '#1e293b' : '#ffffff';
+      var mNeutralTxt = isDarkNow ? '#cbd5e1' : '#334155';
+      var mNeutralStyle = 'background-color:' + mNeutralBg + ';color:' + mNeutralTxt + ';';
       var tl = loadTimeline();
 
       // Filter to presentation-flagged events only, then sort: untimed first, then chronological
@@ -4410,8 +4494,11 @@
       var bodyCls  = cardSize === 'S' ? 'text-xs' : cardSize === 'L' ? 'text-base' : 'text-sm';
 
       var mBtnBase = 'text-xs font-medium px-3 py-1.5 transition-colors ';
-      var mBtnOn   = mBtnBase + 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900';
-      var mBtnOff  = mBtnBase + 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700';
+      function mBtnStyle(active) {
+        var bg  = active ? (isDarkNow ? '#e2e8f0' : '#1e293b') : (isDarkNow ? '#1e293b' : '#ffffff');
+        var txt = active ? (isDarkNow ? '#0f172a' : '#ffffff') : (isDarkNow ? '#cbd5e1' : '#334155');
+        return 'background-color:' + bg + ';color:' + txt + ';';
+      }
 
       var inputCls  = 'w-full text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500';
       var labelCls  = 'block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5';
@@ -4421,13 +4508,13 @@
       var h = '<div class="bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 p-6">';
       h += '<div class="flex flex-wrap items-start justify-between gap-3 mb-6">' +
         '<div>' +
-          '<h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">Presentation Timeline</h2>' +
-          '<p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</p>' +
+          (containerEl.id === 'tl-fp-inner' ? '' : '<h2 class="text-sm font-bold text-slate-900 dark:text-slate-100">Presentation Timeline</h2>') +
+          (containerEl.id === 'tl-fp-inner' ? '' : '<p class="text-sm text-slate-700 dark:text-slate-300 mt-0.5">Events toggled for presentation · print-ready for screenshots into PowerPoint &amp; Word</p>') +
         '</div>' +
-        (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-tab' ? '<div id="tl-tab-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
+        (containerEl.id === 'tl-fp-inner' ? '<div id="tl-fp-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-tab' ? '<div id="tl-tab-btns-row" class="flex items-center gap-2">' : containerEl.id === 'timeline-in-abcds' ? '<div id="tl-abcds-btns-row" class="flex items-center gap-2">' : '<div class="flex items-center gap-2">') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
-            '<button onclick="setTimelineMode(\'vertical\')" class="' + (!isAngled ? mBtnOn : mBtnOff) + '">⬇ Vertical</button>' +
-            '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + (isAngled ? mBtnOn : mBtnOff) + '">↘ Angled</button>' +
+            '<button onclick="setTimelineMode(\'vertical\')" class="' + mBtnBase + '" style="' + mBtnStyle(!isAngled) + '">⬇ Vertical</button>' +
+            '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(isAngled) + '">↘ Angled</button>' +
           '</div>' +
           (isAngled ? (function() {
             var stg = localStorage.getItem('ir-angled-stagger') || 'above';
@@ -4436,43 +4523,45 @@
             var spread = parseInt(localStorage.getItem('ir-angled-spread') || '0');
             var tel    = parseInt(localStorage.getItem('ir-angled-telescope') || '0');
             var narrowOn = spread < 0, widenOn = spread > 0;
-            return '<button onclick="window.setAngledStagger(\'' + nextStg + '\')" class="' + mBtnBase + 'rounded-lg border ' + (stgActive ? 'border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '" title="Toggle which side the first card is placed on (above/below spine)">' + (stg === 'above' ? '↑↓ Stagger' : '↓↑ Stagger') + '</button>' +
+            return '<button onclick="window.setAngledStagger(\'' + nextStg + '\')" class="' + mBtnBase + 'rounded-lg border ' + (stgActive ? 'border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700') + '" style="' + (stgActive ? '' : mNeutralStyle) + '" title="Toggle which side the first card is placed on (above/below spine)">' + (stg === 'above' ? '↑↓ Stagger' : '↓↑ Stagger') + '</button>' +
               '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
-                '<button onclick="window.setAngledSpread(-1)" title="Shorten spine" class="' + mBtnBase + (narrowOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">−</button>' +
-                '<button onclick="window.setAngledSpread(1)"  title="Lengthen spine" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + (widenOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">+</button>' +
+                '<button onclick="window.setAngledSpread(-1)" title="Shorten spine" class="' + mBtnBase + (narrowOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'hover:bg-slate-50 dark:hover:bg-slate-700') + '" style="' + (narrowOn ? '' : mNeutralStyle) + '">−</button>' +
+                '<button onclick="window.setAngledSpread(1)"  title="Lengthen spine" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + (widenOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'hover:bg-slate-50 dark:hover:bg-slate-700') + '" style="' + (widenOn ? '' : mNeutralStyle) + '">+</button>' +
               '</div>' +
               (tel > 0
                 ? '<div class="inline-flex rounded-lg border border-sky-400 dark:border-sky-600 overflow-hidden">' +
                     '<button onclick="window.setAngledTelescope()" title="Extend left of spine (click to increase, × to reset)" class="' + mBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300">⇤ Telescope ' + tel + '</button>' +
                     '<button onclick="window.resetAngledTelescope()" title="Reset telescope to 0" class="border-l border-sky-400 dark:border-sky-600 ' + mBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-800">×</button>' +
                   '</div>'
-                : '<button onclick="window.setAngledTelescope()" title="Extend left of spine to make room for the exec summary panel" class="' + mBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">⇤ Telescope</button>'
+                : '<button onclick="window.setAngledTelescope()" title="Extend left of spine to make room for the exec summary panel" class="' + mBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700" style="' + mNeutralStyle + '">⇤ Telescope</button>'
               );
           })() : '') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
-            '<button onclick="setClockMode(false)" class="' + (!is24h ? mBtnOn : mBtnOff) + '">12h</button>' +
-            '<button onclick="setClockMode(true)" class="border-l border-slate-300 dark:border-slate-600 ' + (is24h ? mBtnOn : mBtnOff) + '">24h</button>' +
+            '<button onclick="setClockMode(false)" class="' + mBtnBase + '" style="' + mBtnStyle(!is24h) + '">12h</button>' +
+            '<button onclick="setClockMode(true)" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(is24h) + '">24h</button>' +
           '</div>' +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
-            '<button onclick="setTimelineScale(\'none\')" class="' + (!timeScale ? mBtnOn : mBtnOff) + '">Unscaled</button>' +
-            '<button onclick="setTimelineScale(\'time\')" class="border-l border-slate-300 dark:border-slate-600 ' + (timeScale ? mBtnOn : mBtnOff) + '">Scaled</button>' +
+            '<button onclick="setTimelineScale(\'none\')" class="' + mBtnBase + '" style="' + mBtnStyle(!timeScale) + '">Unscaled</button>' +
+            '<button onclick="setTimelineScale(\'time\')" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(timeScale) + '">Scaled</button>' +
           '</div>' +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
-            '<button onclick="setCardSize(\'S\')" class="' + (cardSize === 'S' ? mBtnOn : mBtnOff) + '">S</button>' +
-            '<button onclick="setCardSize(\'M\')" class="border-l border-slate-300 dark:border-slate-600 ' + (cardSize === 'M' ? mBtnOn : mBtnOff) + '">M</button>' +
-            '<button onclick="setCardSize(\'L\')" class="border-l border-slate-300 dark:border-slate-600 ' + (cardSize === 'L' ? mBtnOn : mBtnOff) + '">L</button>' +
+            '<button onclick="setCardSize(\'S\')" class="' + mBtnBase + '" style="' + mBtnStyle(cardSize === 'S') + '">S</button>' +
+            '<button onclick="setCardSize(\'M\')" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(cardSize === 'M') + '">M</button>' +
+            '<button onclick="setCardSize(\'L\')" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + '" style="' + mBtnStyle(cardSize === 'L') + '">L</button>' +
           '</div>' +
-          '<button onclick="window.toggleTlHl()" class="' + mBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 ' + (tlHlOff ? 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700' : 'text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30') + '" title="Toggle IOC highlights">🎯 IOC</button>' +
+          '<button onclick="window.toggleTlHl()" class="' + mBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 ' + (tlHlOff ? 'hover:bg-slate-50 dark:hover:bg-slate-700' : 'text-sky-600 dark:text-sky-400 border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30') + '" style="' + (tlHlOff ? mNeutralStyle : '') + '" title="Toggle IOC highlights">🎯 IOC</button>' +
           renderHlColorPicker() +
           (function(){
             var hasSummary = !!loadExecSummary();
             var summaryOn = hasSummary && isExecSummaryVisible();
             var titleOn = !!document.getElementById('tl-fp-title-float');
-            return (hasSummary ? '<button onclick="toggleExecSummary()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (summaryOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="' + (summaryOn ? 'Hide executive summary' : 'Show executive summary') + '">👑 Exec Sum</button>' : '') +
-            (containerEl.id === 'tl-fp-inner' || containerEl.id === 'timeline-in-tab' ? '<button id="tl-fp-title-btn" onclick="window.fpToggleTitle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (titleOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" title="Toggle draggable incident title">🏷 Title</button>' : '') +
-            '<button onclick="openExecSummaryModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" title="Add or edit the executive summary">👑 Exec Sum Edit</button>';
+            return '<button onclick="openExecSummaryModal()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" style="' + mNeutralStyle + '" title="Add or edit the executive summary">👑 Exec Sum Edit</button>' +
+            (hasSummary ? '<button onclick="toggleExecSummary()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (summaryOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" style="' + (summaryOn ? '' : mNeutralStyle) + '" title="' + (summaryOn ? 'Hide executive summary' : 'Show executive summary') + '">👑 Exec Sum</button>' : '') +
+            '<button id="tl-fp-title-btn" onclick="window.fpToggleTitle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border ' + (titleOn ? 'border-sky-400 dark:border-sky-500 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700') + ' transition-colors" style="' + (titleOn ? '' : mNeutralStyle) + '" title="Toggle draggable incident title">🏷 Title</button>';
           })() +
-          (containerEl.id !== 'tl-fp-inner' ? '<button onclick="window.enterTimelineFullPage()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">⛶ Full Page</button>' : '') +
+          (containerEl.id === 'tl-fp-inner'
+            ? '<button onclick="window.exitTimelineFullPage()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" style="' + mNeutralStyle + '">✕ Exit Full Page</button>'
+            : '<button onclick="window.enterTimelineFullPage()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors" style="' + mNeutralStyle + '">⛶ Full Page</button>') +
         '</div>' +
       '</div>' +
       (containerEl.id === 'tl-fp-inner' ? '<div style="height:60px"></div>' : '');
@@ -4782,10 +4871,13 @@
           }
         });
 
-        h += '<div style="position:relative;min-height:' + aContH + 'px">' +
+        var canvasScoped = containerEl.id !== 'tl-fp-inner';
+        h += (canvasScoped ? '<div id="' + containerEl.id + '-canvas-outer" style="position:relative;overflow:visible;"><div id="' + containerEl.id + '-canvas-inner" style="transform-origin:0 0;will-change:transform;">' : '') +
+          '<div style="position:relative;min-height:' + aContH + 'px">' +
           '<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible" aria-hidden="true">' + svgMarkup + svgDots + '</svg>' +
           cardMarkup +
-        '</div>';
+          '</div>' +
+        (canvasScoped ? '</div></div>' : '');
 
       } else {
         // ── Vertical mode (default) ──────────────────────────────────────────
@@ -4955,7 +5047,7 @@
         buildTlIconPicker() +
         '<div class="mt-2 grid grid-cols-2 gap-2">' +
           '<div>' +
-            '<label class="' + labelCls + '">Title <span class="text-red-400">*</span></label>' +
+            '<label class="' + labelCls + '">Event <span class="text-red-400">*</span></label>' +
             '<input type="text" data-field="tl-title" placeholder="Short description of what happened" class="' + inputCls + '">' +
           '</div>' +
           '<div>' +
@@ -4979,7 +5071,7 @@
         '</div>' +
         '<div class="mt-2">' +
           '<div class="flex items-center justify-between mb-0.5">' +
-            '<span class="' + labelCls + '">Description (optional)</span>' +
+            '<span class="' + labelCls + '">Event Details (optional)</span>' +
             '<button type="button" onclick="window.tlToggleBodyHlPreview(this)" ' +
               'class="text-xs text-slate-400 dark:text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 transition-colors leading-none" ' +
               'title="Toggle IOC highlights preview">🎯 IOCs</button>' +
@@ -5015,9 +5107,9 @@
             '<tr>' +
               '<th class="' + thCls + '" style="width:12%">Time</th>' +
               '<th class="' + thCls + '" style="width:3%">Icon</th>' +
-              '<th class="' + thCls + '" style="width:20%">Title</th>' +
+              '<th class="' + thCls + '" style="width:20%">Event</th>' +
               '<th class="' + thCls + '" style="width:14%">Source</th>' +
-              '<th class="' + thCls + '">Description</th>' +
+              '<th class="' + thCls + '">Event Details</th>' +
               '<th class="' + thCls + '" style="width:5%;border-right:none" title="Show in Presentation Timeline">Pres.</th>' +
               '<th class="text-left text-xs font-semibold text-slate-700 dark:text-slate-200 px-3 py-2 bg-slate-200 dark:bg-slate-700 border-b-2 border-slate-400 dark:border-slate-500 whitespace-nowrap" style="width:8%">Actions</th>' +
             '</tr>' +
@@ -5074,10 +5166,14 @@
               'ondblclick="editWorkingTlRow(\'' + safeId + '\')" title="Double-click to edit">' +
               '<td class="' + tdCls + ' font-mono whitespace-nowrap">' + escHtml(fmtWtTime(ev.time)) + '</td>' +
               '<td class="' + tdCls + ' text-center">' + escHtml(ev.icon || '') + '</td>' +
-              '<td class="' + tdCls + ' font-medium">' + escHtml(ev.title || '') + '</td>' +
+              '<td class="' + tdCls + ' font-medium">' + (tlHlOff ? escHtml(ev.title || '') : renderHighlighted(ev.title || '', ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(ev.title || ''), ev.highlightStyles, loadHlColors())) + '</td>' +
               '<td class="' + tdCls + ' text-slate-500 dark:text-slate-400">' + escHtml(ev.source || ev.label || '') + '</td>' +
               '<td class="' + tdCls + ' text-slate-600 dark:text-slate-400">' +
-                escHtml((ev.body || '').slice(0, 120) + (ev.body && ev.body.length > 120 ? '…' : '')) +
+                (function() {
+                  var snippet = (ev.body || '').slice(0, 120) + (ev.body && ev.body.length > 120 ? '…' : '');
+                  var hl = ev.highlights && ev.highlights.length ? ev.highlights : scanIocs(ev.body || '');
+                  return tlHlOff ? escHtml(snippet) : renderHighlighted(snippet, hl, ev.highlightStyles, loadHlColors());
+                })() +
                 (ev.images && ev.images.length
                   ? renderImageStrip(ev.images, 'view', ev.id) +
                     '<div class="mt-1"><button onclick="event.stopPropagation();toggleEventImagesInPresentation(\'' + safeId + '\')" ' +
@@ -5104,6 +5200,11 @@
           }
         });
 
+        h += '<tr>' +
+          '<td colspan="7" class="px-3 py-2.5 text-center bg-slate-50 dark:bg-slate-800">' +
+            '<button onclick="window.addWorkingTlRow()" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-dashed border-sky-400 dark:border-sky-600 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900 dark:hover:bg-opacity-30 transition-colors">+ Add Event</button>' +
+          '</td>' +
+        '</tr>';
         h += '</tbody></table></div>';
       }
 
@@ -5162,6 +5263,35 @@
     }
 
     // Working timeline row actions
+    window.addWorkingTlRow = function() {
+      var d = new Date();
+      var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+      var nowLocal = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      var tl = loadTimeline();
+      var id = 'tl-manual-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      tl.push({
+        id: id,
+        sourceId: null,
+        sourceType: 'manual',
+        time: nowLocal,
+        title: '',
+        body: '',
+        icon: '',
+        source: '',
+        impact: false,
+        hidden: false,
+        showInPresentation: true,
+        highlights: [],
+        highlightStyles: {},
+        images: []
+      });
+      saveTimeline(tl);
+      editingWorkingTlImages = [];
+      editingWorkingTlId = id;
+      renderAllTimelines();
+      var editRow = document.querySelector('#working-timeline-container .tl-edit-form');
+      if (editRow) editRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
     window.editWorkingTlRow = function(id) {
       var tl = loadTimeline();
       var ev = tl.filter(function(e) { return e.id === id; })[0];
@@ -5230,6 +5360,8 @@
       _tlMoveToolbar();
       applyTlTransform();
       renderTimeline(document.getElementById('timeline-in-abcds'));
+      _abMoveToolbar();
+      applyAbTransform();
       renderWorkingTimeline();
       var fpInner = document.getElementById('tl-fp-inner');
       if (fpInner) { renderTimeline(fpInner); _fpMoveToolbar(); applyFpTransform(); }
@@ -6134,7 +6266,7 @@
       var md = L.join('\n');
       var a = document.createElement('a');
       a.href = 'data:text/markdown;charset=utf-8,' + encodeURIComponent(md);
-      a.download = slug + '_' + new Date().toISOString().slice(0,10) + '.md';
+      a.download = slug + '_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.md';
       a.click();
     });
 
@@ -6147,7 +6279,7 @@
         }
       });
       var name = (bundle.data['ir-incident-name'] || 'incident').replace(/[^a-z0-9_\-]/gi, '_').slice(0, 40) || 'incident';
-      var date = new Date().toISOString().slice(0, 10);
+      var date = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
       var json = JSON.stringify(bundle, null, 2);
       var a = document.createElement('a');
       a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(json);
@@ -6257,11 +6389,18 @@
     document.getElementById('btn-tz-adjust').addEventListener('click', openTzAdjustModal);
 
     // ── Regular timeline tab pan handlers ──────────────────────────────
+    // (mousedown is attached per-render in applyTlTransform() since the
+    // canvas wrapper is only present in the DOM in Angled mode and is
+    // recreated on every render)
     (function() {
-      var panOuter = document.getElementById('tl-tab-pan-outer');
-      if (panOuter) panOuter.addEventListener('mousedown', _tlMouseDown);
       window.addEventListener('mousemove', _tlMouseMove);
       window.addEventListener('mouseup', _tlMouseUp);
+    })();
+
+    // ── War Room embedded Presentation Timeline pan handlers ───────────
+    (function() {
+      window.addEventListener('mousemove', _abMouseMove);
+      window.addEventListener('mouseup', _abMouseUp);
     })();
 
     // ── Smart Import ───────────────────────────────────────────────────
