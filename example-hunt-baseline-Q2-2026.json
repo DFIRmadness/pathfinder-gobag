@@ -1,0 +1,209 @@
+{
+  "version": 1,
+  "exportedAt": "2026-06-27T17:00:00.000Z",
+  "data": {
+    "ir-incident-name": "Proactive Hunt: Q2 2026 Baseline",
+    "ir-hunts": [
+      {
+        "id": "hunt-base-01",
+        "createdAt": "2026-06-10T09:00:00.000Z",
+        "icon": "🎫",
+        "title": "Kerberoastable service accounts hold Domain Admin membership, enabling one-step full domain compromise",
+        "status": "confirmed",
+        "trigger": "model",
+        "hypothesisType": "analytics",
+        "confidence": "high",
+        "cve": "",
+        "referenceUrls": "https://attack.mitre.org/techniques/T1558/003/\nhttps://attack.mitre.org/techniques/T1078/002/\nhttps://adsecurity.org/?p=2293",
+        "premise": "Any Active Directory account with a registered Service Principal Name (SPN) can have its Kerberos TGS ticket requested by any authenticated domain user; no special privilege required. If that account also holds Domain Admins membership, a single offline RC4-HMAC ticket crack yields full domain compromise. This misconfiguration is trivially enumerable by any attacker with a foothold and is a common first pivot in AD-based intrusions. Quarterly AD privilege review model flagged SPN accounts in privileged groups for validation.",
+        "huntScope": "All Active Directory user accounts across corp.local with a servicePrincipalName attribute set. Cross-reference against Domain Admins, Enterprise Admins, Schema Admins, and Backup Operators group membership. No special audit policy required; LDAP read access to AD is sufficient.",
+        "evidenceStart": "2026-06-10",
+        "evidenceEnd": "2026-06-10",
+        "dataSourcesNeeded": "Active Directory LDAP query; PowerShell Get-ADUser with Filter {ServicePrincipalName -ne \"$null\"} plus group membership lookup\nKerberos audit logs (Event ID 4769); identify RC4-HMAC etype 0x17 TGS requests against discovered SPNs (retroactive baselining)\nAD ACL audit; confirm no additional permissions delegated beyond group membership",
+        "dataSourcesAvailable": "AD PowerShell module (available on any domain-joined host with RSAT)\nMicrosoft Sentinel; Security Event connector forwarding DC logs\nMDE Advanced Hunting; IdentityQueryEvents table",
+        "conclusionStatement": "CONFIRMED. Two Kerberoastable Domain Admin accounts identified:\n\n1. svc-portal-wubba@corp.local; SPN: HTTP/portal-wubba.corp.local; Domain Admins member; no AES enforcement (RC4-HMAC permitted); password last set 847 days ago.\n\n2. svc-sqlreport@corp.local; SPN: MSSQLSvc/sql01.corp.local:1433; Domain Admins member; no AES enforcement; password last set 412 days ago.\n\nBoth accounts are trivially Kerberoastable. Offline cracking of a typical 8–12 character service account password on a GPU cluster takes minutes to hours. Full domain compromise is achievable by any authenticated domain user without generating additional alerts.\n\nRemediation dispatched to IAM team: (1) remove both accounts from Domain Admins immediately, (2) enforce AES-only Kerberos on all SPN accounts, (3) reset passwords to 25+ character random strings, (4) initiate quarterly SPN-to-privilege audit as a standing process.",
+        "recommendedAction": "escalate",
+        "expanded": true,
+        "techniques": [
+          {
+            "id": "T1558.003",
+            "name": "Kerberoasting",
+            "tactic": "Credential Access",
+            "expanded": true,
+            "coverage": "gap",
+            "expectedIocs": "Event ID 4769 on domain controllers with EncryptionType 0x17 (RC4-HMAC) for SPN accounts; especially from workstations or non-service hosts\nLarge bursts of 4769 requests from a single source IP in a short window (automated Kerberoasting tooling)\nImpacket GetUserSPNs.py, Rubeus kerberoast, or Invoke-Kerberoast process activity on any host",
+            "notes": "RC4-HMAC downgrade is the key signal; legitimate modern services negotiate AES256 (etype 0x12) or AES128 (etype 0x11). An etype 0x17 request for a sensitive SPN should be treated as an adversarial indicator unless you have a documented legacy system requiring RC4. AES enforcement via msDS-SupportedEncryptionTypes is the primary mitigating control.",
+            "queryIdeas": "// Event 4769 RC4-HMAC TGS requests on DCs; Sentinel KQL\nSecurityEvent\n| where EventID == 4769\n| where TicketEncryptionType == \"0x17\"  // RC4-HMAC\n| where ServiceName !endswith \"$\"       // exclude machine accounts\n| where ServiceName !in (\"krbtgt\", \"kadmin\")\n| summarize count() by bin(TimeGenerated, 1h), SubjectUserName, ServiceName, IpAddress\n| where count_ > 5\n| sort by TimeGenerated desc\n\n// PowerShell: find all Kerberoastable DA accounts\nGet-ADUser -Filter {ServicePrincipalName -ne \"$null\"} -Properties ServicePrincipalName,MemberOf |\nWhere-Object { $_.MemberOf -match \"Domain Admins|Enterprise Admins\" } |\nSelect-Object SamAccountName, ServicePrincipalName, PasswordLastSet",
+            "highlights": [],
+            "highlightStyles": {}
+          },
+          {
+            "id": "T1078.002",
+            "name": "Domain Accounts",
+            "tactic": "Valid Accounts",
+            "expanded": false,
+            "coverage": "visibility",
+            "expectedIocs": "Successful logon (Event 4624, Logon Type 3) from svc-portal-wubba or svc-sqlreport from non-expected source IPs\nAny interactive logon (Logon Type 2 or 10) for a service account; service accounts should never log on interactively",
+            "notes": "Once cracked, the plaintext password can be used in Pass-the-Password attacks or direct logon. Monitor these accounts for any authentication outside their documented service contexts. Set a Sentinel alert on logon type 2/10 for service accounts as a standing detection.",
+            "queryIdeas": "// Monitor service accounts for interactive or anomalous logon\nSecurityEvent\n| where EventID == 4624\n| where TargetUserName in (\"svc-portal-wubba\", \"svc-sqlreport\")\n| where LogonType in (2, 10)  // Interactive, RemoteInteractive\n| project TimeGenerated, TargetUserName, LogonType, IpAddress, WorkstationName",
+            "highlights": [],
+            "highlightStyles": {}
+          }
+        ]
+      },
+      {
+        "id": "hunt-base-02",
+        "createdAt": "2026-06-13T10:30:00.000Z",
+        "icon": "🔓",
+        "title": "Conditional Access does not restrict the OAuth 2.0 device authorization grant flow: tenant-wide MFA bypass exposure for all standard users",
+        "status": "data-gap",
+        "trigger": "intel",
+        "hypothesisType": "intel",
+        "confidence": "high",
+        "cve": "",
+        "referenceUrls": "https://attack.mitre.org/techniques/T1528/\nhttps://attack.mitre.org/techniques/T1550/001/\nhttps://www.microsoft.com/en-us/security/blog/2022/01/26/evolved-phishing-device-registration-trick-adds-to-phishers-toolbox-for-victims-without-mfa/\nhttps://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-authentication-flows#device-code-flow",
+        "premise": "The OAuth 2.0 device authorization grant (device code flow) allows a user to authenticate by entering a short code at the legitimate Microsoft devicelogin.microsoft.com portal. Because the victim authenticates at a real Microsoft URL (not a phishing page), URL-reputation controls, Safe Links, and browser-based phishing heuristics do not fire. The attacker polls the Microsoft /token endpoint directly; the token is issued to the attacker's IP, not the victim's. Most Conditional Access policies apply to interactive sign-in flows and do not evaluate or block the /devicecode request. If the tenant has no explicit CA policy targeting this grant type, any user with a valid M365 account can be silently compromised through a device code lure, bypassing MFA enforcement. Recent MSTIC and CISA advisories confirm this technique is actively exploited by multiple nation-state actors.",
+        "huntScope": "Microsoft Entra ID; all Conditional Access policies, sign-in logs (NonInteractiveUserSignInLogs and SigninLogs), and audit logs for the trailing 90 days. Focus: identify CA policy coverage for device code flow; retroactively check for device code authentication events from anomalous source IPs.",
+        "evidenceStart": "2026-03-15",
+        "evidenceEnd": "2026-06-13",
+        "dataSourcesNeeded": "Entra ID Conditional Access policy export; verify grant type coverage for all policies\nNonInteractiveUserSignInLogs; device code flow events appear here, NOT in standard SigninLogs\nSigninLogs filtered by ClientAppUsed == 'Device code' or AuthenticationProtocol == 'deviceCode'\nEntra ID Audit Logs; ConsentGrant events following device code authentication from anomalous IPs",
+        "dataSourcesAvailable": "Microsoft Sentinel; Entra ID diagnostic settings forwarding SigninLogs (confirmed)\nNonInteractiveUserSignInLogs; NOT currently forwarded to Sentinel (log source gap discovered during this hunt)\nEntra ID portal; CA policy export available to Global Reader",
+        "conclusionStatement": "DATA GAP; cannot close hunt without remediation.\n\nCA policy review: Confirmed; no Conditional Access policy in the tenant references the device code grant type. Existing MFA policies apply to interactive sign-in only (ClientAppUsed targeting browser and modern auth clients). The device authorization grant flow is entirely uncontrolled.\n\nLog coverage: NonInteractiveUserSignInLogs are not forwarded to Sentinel. Standard SigninLogs do not reliably capture device code flow events. 90-day retroactive log pull via Entra ID portal for device code events returned 0 results; consistent with the log source gap, not evidence of absence.\n\nRecommended immediate actions:\n(1) Deploy CA policy: block device code flow for all users except a documented exceptions group (kiosk/shared device scenarios).\n(2) Enable NonInteractiveUserSignInLogs ingestion to Sentinel (Entra ID diagnostic settings → add log category).\n(3) Re-run retroactive hunt in 30 days once log source confirmed active.\n(4) Hunt cannot be closed as denied; absence of evidence is not evidence of absence here.",
+        "recommendedAction": "log-source",
+        "expanded": false,
+        "techniques": [
+          {
+            "id": "T1528",
+            "name": "Steal Application Access Token",
+            "tactic": "Credential Access",
+            "expanded": true,
+            "coverage": "gap",
+            "expectedIocs": "Entra ID sign-in events with AuthenticationProtocol == 'deviceCode' from IPs inconsistent with user's known locations\nSign-in from a new country for an account with no travel history; within 1 hour of a device code lure email delivery\nNew OAuth app consent grant within 30 minutes of a successful device code authentication from an anomalous IP",
+            "notes": "Device code flow authentication events appear in NonInteractiveUserSignInLogs, not SigninLogs. This is the key log source gap. Many tenants that forward SigninLogs to Sentinel believe they have full auth coverage but are blind to device code activity. This hunt discovered the gap before exploitation; the control weakness is confirmed regardless of whether past exploitation is detectable.",
+            "queryIdeas": "// Sentinel KQL; device code sign-in detection (requires NonInteractiveUserSignInLogs)\nAADNonInteractiveUserSignInLogs\n| where AuthenticationProtocol == \"deviceCode\" or ClientAppUsed == \"Device code\"\n| where IPAddress !in (known_vpn_ips) // replace with your VPN/office egress\n| project TimeGenerated, UserPrincipalName, IPAddress, Location, AppDisplayName, ResultDescription\n| sort by TimeGenerated desc\n\n// Detect consent grants post device-code auth (correlation)\nAuditLogs\n| where OperationName == \"Consent to application\"\n| where TimeGenerated > ago(90d)\n| extend InitiatedBy = tostring(InitiatedBy.user.userPrincipalName)\n| join kind=inner (\n    AADNonInteractiveUserSignInLogs\n    | where AuthenticationProtocol == \"deviceCode\"\n    | project UserPrincipalName, DeviceCodeTime = TimeGenerated\n) on $left.InitiatedBy == $right.UserPrincipalName\n| where TimeGenerated between (DeviceCodeTime .. (DeviceCodeTime + 1h))",
+            "highlights": [],
+            "highlightStyles": {}
+          },
+          {
+            "id": "T1550.001",
+            "name": "Application Access Token",
+            "tactic": "Defense Evasion",
+            "expanded": false,
+            "coverage": "gap",
+            "expectedIocs": "App-only sign-ins from non-SNI IP ranges using tokens issued via device code flow\nRefresh token issued with 90-day lifetime to non-corporate IP; detected by token binding absence",
+            "notes": "Device code–issued refresh tokens have 90-day TTL and are bound to no device (no Intune device compliance, no PRT, no FIDO2). Once issued to an attacker IP, the token is refreshed silently from that IP indefinitely until revoked. Standard CA policies evaluating sign-in risk do not trigger on refresh token use; only initial issuance is evaluated. This means even after a CA policy is deployed, previously issued tokens remain valid.",
+            "queryIdeas": "// Check for active refresh tokens with 90d expiry from non-managed devices\n// Run via Graph API (requires Directory.Read.All)\n// GET /users/{userId}/authentication/methods; look for unusual browser sessions\n// GET /me/oauth2PermissionGrants; list active consent grants\n// Revoke all refresh tokens if suspicious:\n// POST /users/{userId}/revokeSignInSessions",
+            "highlights": [],
+            "highlightStyles": {}
+          }
+        ]
+      },
+      {
+        "id": "hunt-base-03",
+        "createdAt": "2026-06-18T11:00:00.000Z",
+        "icon": "🔧",
+        "title": "Vulnerable kernel drivers (LOLDrivers catalog: RTCore64, WinRing0x64, mhyprot2 variants) loaded or staged on domain-joined endpoints, enabling BYOVD EDR bypass",
+        "status": "denied",
+        "trigger": "intel",
+        "hypothesisType": "intel",
+        "confidence": "medium",
+        "cve": "CVE-2019-16098",
+        "referenceUrls": "https://attack.mitre.org/techniques/T1562/001/\nhttps://attack.mitre.org/techniques/T1068/\nhttps://www.loldrivers.io\nhttps://github.com/magicsword-io/LOLDrivers\nhttps://nvd.nist.gov/vuln/detail/CVE-2019-16098",
+        "premise": "Bring Your Own Vulnerable Driver (BYOVD) attacks load a legitimately signed but exploitable kernel driver as a Windows service, then use its documented-vulnerable IOCTLs to write arbitrary kernel memory; including removing EDR callback registrations. The LOLDrivers project catalogs hundreds of such drivers. RTCore64.sys (CVE-2019-16098) is particularly prevalent: it accepts unauthenticated kernel memory read/write via IOCTL and has been used by multiple nation-state groups to blind CrowdStrike Falcon, Sophos, ESET, and others. A proactive hunt checking our endpoint fleet's loaded and staged drivers against the LOLDrivers SHA256 catalog would identify any pre-positioned capability.",
+        "huntScope": "All 847 CrowdStrike Falcon-enrolled endpoints and MDE-enrolled devices. Driver file inventory (C:\\Windows\\System32\\drivers\\, C:\\Windows\\SysWOW64\\), Windows Service registry (HKLM\\SYSTEM\\CurrentControlSet\\Services), and Sysmon Event 6 (driver loaded) logs.",
+        "evidenceStart": "2026-05-01",
+        "evidenceEnd": "2026-06-18",
+        "dataSourcesNeeded": "MDE Advanced Hunting; DeviceFileCertificateInfo and DeviceFileEvents tables for driver SHA256 hash hunting\nCrowdStrike Falcon; Discover module driver inventory query\nWindows Event ID 7045 (new service installed) on all endpoints forwarded to Sentinel\nSysmon Event ID 6 (driver loaded); requires Sysmon deployed with a configuration capturing ImageLoaded events",
+        "dataSourcesAvailable": "MDE Advanced Hunting; available (E5 license)\nCrowdStrike Falcon Discover; available\nSentinel Windows Security Events connector; 7045 forwarded\nSysmon; deployed on 612 of 847 endpoints (72% coverage); 235 endpoints missing Sysmon",
+        "conclusionStatement": "DENIED; no LOLDriver matches found.\n\nHash hunt scope: 847 MDE-enrolled endpoints cross-referenced against the top 50 high-risk LOLDriver SHA256 hashes (RTCore64.sys variants: 3 hashes; WinRing0x64.sys: 2 hashes; mhyprot2.sys: 4 hashes; gdrv.sys: 2 hashes; ProcExp152.sys: 1 hash; AsrDrv103.sys: 2 hashes; remaining 36 from LOLDrivers 'high severity' tier). Zero matches returned.\n\nFalse-positive review: 14 drivers with revoked Authenticode certificates found; all confirmed as legitimate legacy RAID controller and NIC vendor drivers, each present in vendor allowlist with documented justification.\n\nHunt closed as denied. No evidence of pre-positioned BYOVD capability across the current fleet.\n\nStanding recommendations: (1) Enable Microsoft HVCI (Hypervisor-Protected Code Integrity); blocks unsigned and revoked drivers at hypervisor level, eliminates most BYOVD attack surface. (2) Deploy Microsoft WDAC driver blocklist including all LOLDrivers high-severity hashes. (3) Expand Sysmon coverage to remaining 235 endpoints for Event 6 (driver loaded) visibility.",
+        "recommendedAction": "no-action",
+        "expanded": false,
+        "techniques": [
+          {
+            "id": "T1562.001",
+            "name": "Disable or Modify Tools",
+            "tactic": "Defense Evasion",
+            "expanded": true,
+            "coverage": "detect",
+            "expectedIocs": "Driver SHA256 matching LOLDrivers catalog on any host\nWindows Event 7045 for kernel-mode driver with revoked or untrusted Authenticode certificate\nFalcon or MDE sensor heartbeat gap >5 minutes outside documented maintenance window\nRegistry key: HKLM\\SYSTEM\\CurrentControlSet\\Services\\<suspicious_name> with ImagePath pointing to unusual driver location",
+            "notes": "Event 7045 is available on all Windows hosts without Sysmon or advanced audit policy. Filtering to 'kernel mode driver' and correlating to certificate validity is the highest-fidelity signal available. The revoked certificate check is the key differentiator; legitimate vendor drivers are typically signed with valid EV certificates.",
+            "queryIdeas": "// MDE hash hunt against LOLDrivers catalog\nlet loldrivers = dynamic([\n    \"3a1c5c476e8c1c8f7be0ae17e5dacc85\",  // RTCore64.sys v1.0.0.0\n    \"9b2e5d8a1c4f7e0d3b6a9c2f5e8b1d4a\"   // add remaining hashes\n]);\nDeviceFileEvents\n| where SHA256 in (loldrivers)\n| project Timestamp, DeviceName, FileName, FolderPath, SHA256, InitiatingProcessFileName\n\n// Sentinel: kernel driver installs with revoked certs (requires Sysmon Event 6)\nEvent\n| where EventID == 6  // Sysmon driver loaded\n| extend imageLoaded = tostring(parse_xml(EventData).DataItem.EventData.Data[0])\n| where imageLoaded contains \"Signed: false\" or imageLoaded contains \"Revoked: true\"\n| project TimeGenerated, Computer, imageLoaded",
+            "highlights": [],
+            "highlightStyles": {}
+          },
+          {
+            "id": "T1068",
+            "name": "Exploitation for Privilege Escalation",
+            "tactic": "Privilege Escalation",
+            "expanded": false,
+            "coverage": "gap",
+            "expectedIocs": "IOCTL calls to vulnerable driver from unexpected process (not the driver's associated service)\nKernel-level write operations from user-mode process after driver load\nEDR heartbeat loss coinciding with new kernel driver load on same host",
+            "notes": "The IOCTL exploitation phase happens entirely in kernel memory and produces no file artifacts; detection depends on catching the driver load (Event 7045/Sysmon 6) before exploitation occurs. There is no reliable runtime detection of the IOCTL abuse once the driver is loaded. Prevention (HVCI, driver blocklist) is the only durable control.",
+            "queryIdeas": "// Correlate sensor offline with driver install (Falcon + Sentinel)\n// 1. Pull Falcon hosts with last-seen gap > 5 min\n// 2. Cross-reference to 7045 events on those hosts in the 10 min prior to gap\nSecurityEvent\n| where EventID == 7045\n| where ServiceType == \"kernel mode driver\"\n| join kind=inner (\n    // replace with your Falcon offline event table\n    FalconOfflineHosts\n    | project DeviceName, OfflineAt\n) on Computer == DeviceName\n| where TimeGenerated between ((OfflineAt - 10m) .. OfflineAt)\n| project TimeGenerated, Computer, ServiceName, ServiceFileName, OfflineAt",
+            "highlights": [],
+            "highlightStyles": {}
+          }
+        ]
+      },
+      {
+        "id": "hunt-base-04",
+        "createdAt": "2026-06-20T14:00:00.000Z",
+        "icon": "📂",
+        "title": "After-hours SharePoint bulk download from accounts outside peer group baseline: potential pre-exfiltration data staging",
+        "status": "inconclusive",
+        "trigger": "anomaly",
+        "hypothesisType": "analytics",
+        "confidence": "medium",
+        "cve": "",
+        "referenceUrls": "https://attack.mitre.org/techniques/T1213/002/\nhttps://attack.mitre.org/techniques/T1530/\nhttps://attack.mitre.org/techniques/T1048/",
+        "premise": "Defender for Cloud Apps UEBA generated two 'Mass Download' policy matches in the trailing 30 days, both automatically suppressed by an overly broad suppression rule. Manual review of SharePoint audit logs for the same window reveals three additional after-hours download clusters totaling approximately 8 GB from accounts outside their documented peer group norms, all between 01:00–04:00 UTC. This pattern is consistent with pre-exfiltration data staging; an attacker with compromised cloud credentials manually collecting research before moving it out. It is also consistent with legitimate after-hours remote work. The hypothesis cannot be confirmed or denied without data owner interviews and endpoint corroboration.",
+        "huntScope": "SharePoint Online and OneDrive audit logs (FileAccessed, FileDownloaded, FileSyncDownloadedFull events) for all accounts in the last 30 days. Filter to 20:00–06:00 UTC. Cross-reference anomalous accounts against Entra ID sign-in location history, endpoint Falcon telemetry, and manager interviews.",
+        "evidenceStart": "2026-05-20",
+        "evidenceEnd": "2026-06-20",
+        "dataSourcesNeeded": "SharePoint Online Unified Audit Log (M365 Compliance Center or via Sentinel OfficeActivity table)\nEntra ID SigninLogs; source IP and location for accounts identified as anomalous\nCrowdStrike Falcon; confirm endpoint activity during download windows for identified accounts\nManager/owner interviews; confirm or deny legitimacy of flagged download sessions",
+        "dataSourcesAvailable": "Sentinel OfficeActivity connector (SharePoint UAL forwarded)\nEntra ID SigninLogs (forwarded to Sentinel)\nFalcon; available for all enrolled endpoints\nInterviews; pending scheduling",
+        "conclusionStatement": "INCONCLUSIVE; one account unresolved, hunt remains open.\n\nThree download clusters identified:\n\n1. svc-backup@corp.local; 3.1 GB from /sites/Research/ at 02:00 UTC nightly. Confirmed legitimate: documented automated backup process. Excluded from scope.\n\n2. alex.hirsch@corp.local; 2.7 GB from /sites/NeuroResearch/ over 2 nights. Confirmed legitimate per manager interview: large document export for external conference presentation, performed from home IP consistent with Entra ID location history. Falcon shows no suspicious activity on host:HIRSCH-WKS-01 during those windows. Closed.\n\n3. terry.ingram@corp.local; 4.1 GB from /sites/DARPA-Contract/ between 02:00–02:45 UTC on three consecutive nights (June 15, 16, 17). Entra ID sign-in source IP is consistent with user's home address. No IOCs on host:INGRAM-WKS-01 per Falcon. Manager was unaware of overnight work. terry.ingram has not yet responded to interview request.\n\nHunt remains OPEN on account 3. If interview produces no satisfactory explanation for the download pattern, escalate to formal investigation; the DARPA-Contract SharePoint library contains CUI-designated materials with mandatory breach reporting obligations.",
+        "recommendedAction": "escalate",
+        "expanded": false,
+        "techniques": [
+          {
+            "id": "T1213.002",
+            "name": "Sharepoint",
+            "tactic": "Collection",
+            "expanded": true,
+            "coverage": "visibility",
+            "expectedIocs": "FileDownloaded or FileSyncDownloadedFull events exceeding 1 GB per session for standard user accounts\nDownload sessions from accounts occurring exclusively 20:00–06:00 UTC with no corresponding daytime activity\nDownloads from SharePoint libraries tagged as sensitive (DARPA-Contract, NeuroResearch, IP-Vault) by accounts outside the documented owner group",
+            "notes": "SharePoint UAL is available in M365 Compliance Center with 90-day retention (E3) or 1-year (E5). The OfficeActivity table in Sentinel has the same data if the connector is active. Key fields: Operation (FileDownloaded, FileSyncDownloadedFull), UserId, SiteUrl, SourceFileName, UserAgent. ClientIP anomaly versus Entra ID usual location is the highest-value correlation.",
+            "queryIdeas": "// Sentinel KQL; after-hours SharePoint bulk download hunt\nOfficeActivity\n| where TimeGenerated > ago(30d)\n| where RecordType == \"SharePointFileOperation\"\n| where Operation in (\"FileDownloaded\", \"FileSyncDownloadedFull\", \"FileAccessed\")\n| where hourofday(TimeGenerated) between (20 .. 23) or hourofday(TimeGenerated) between (0 .. 6)\n| summarize\n    download_count = count(),\n    sites = make_set(SiteUrl),\n    files = make_set(SourceFileName)\n    by UserId, bin(TimeGenerated, 1d)\n| where download_count > 100\n| sort by download_count desc\n\n// Peer group anomaly; compare to 30d personal baseline\nOfficeActivity\n| where RecordType == \"SharePointFileOperation\"\n| where Operation == \"FileDownloaded\"\n| summarize\n    after_hours = countif(hourofday(TimeGenerated) < 6 or hourofday(TimeGenerated) > 20),\n    total = count()\n    by UserId\n| extend after_hours_pct = round(100.0 * after_hours / total, 1)\n| where after_hours_pct > 80 and total > 50\n| sort by after_hours_pct desc",
+            "highlights": [],
+            "highlightStyles": {}
+          },
+          {
+            "id": "T1530",
+            "name": "Data from Cloud Storage",
+            "tactic": "Collection",
+            "expanded": false,
+            "coverage": "visibility",
+            "expectedIocs": "Bulk API calls to SharePoint /drive/root/children or /me/drive for content enumeration preceding a download cluster\nMicrosoft Graph API calls from an IP inconsistent with the account's Entra ID usual sign-in location",
+            "notes": "Attacker-controlled OAuth apps (like NeuraSyncPro in a compromised tenant) access SharePoint via Graph API rather than the browser client; these show a distinct UserAgent (Microsoft Graph API requests vs. OneDrive sync client). Filter on UserAgent to distinguish browser/sync-client downloads from programmatic API access.",
+            "queryIdeas": "// Distinguish browser downloads vs. Graph API access in UAL\nOfficeActivity\n| where RecordType == \"SharePointFileOperation\"\n| where Operation == \"FileDownloaded\"\n| extend ua = tostring(parse_json(AdditionalInfo).UserAgent)\n| where ua contains \"python-requests\" or ua contains \"PostmanRuntime\" or ua contains \"Go-http-client\"\n   or (ua !contains \"OneDrive\" and ua !contains \"Mozilla\" and ua !contains \"Microsoft Office\")\n| project TimeGenerated, UserId, ClientIP, SourceFileName, ua, SiteUrl",
+            "highlights": [],
+            "highlightStyles": {}
+          },
+          {
+            "id": "T1048",
+            "name": "Exfiltration Over Alternative Protocol",
+            "tactic": "Exfiltration",
+            "expanded": false,
+            "coverage": "gap",
+            "expectedIocs": "Sustained high-volume egress to non-Microsoft IPs following a SharePoint download cluster (firewall/proxy NetFlow)\nDirect-IP HTTPS (no SNI/DNS resolution) to non-SNI IP ranges shortly after large SharePoint file access events",
+            "notes": "The download-then-exfiltrate pattern typically shows two distinct phases in proxy logs: first, a SharePoint/OneDrive download cluster (cloud-to-endpoint), then later, an endpoint-to-external upload (endpoint egress). Correlate the SharePoint UAL timestamps with NetFlow egress anomalies on the same host in the following 24–48 hours.",
+            "queryIdeas": "// Correlate SharePoint download with egress anomaly on same host\n// Step 1: identify hosts with large SharePoint download sessions\n// Step 2: pull NetFlow for those hosts in the 24h following the download\n// Step 3: flag sustained egress >500 MB to non-CDN, non-Microsoft IP ranges\n// Proxy/firewall log query will vary by vendor (Zscaler, Palo Alto, Cisco)\n// Generic pattern:\nCommonSecurityLog\n| where TimeGenerated > ago(30d)\n| where DestinationPort == 443\n| where not(ipv4_is_in_range(DestinationIP, \"13.64.0.0/11\"))  // exclude Azure\n| summarize total_bytes = sum(SentBytes) by bin(TimeGenerated, 1h), SourceHostName, DestinationIP\n| where total_bytes > 500000000  // 500 MB\n| sort by total_bytes desc",
+            "highlights": [],
+            "highlightStyles": {}
+          }
+        ]
+      }
+    ]
+  }
+}

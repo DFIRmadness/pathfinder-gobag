@@ -2,7 +2,7 @@
 
 **The IR and Threat Hunting Workbench: Illuminating the Path in the Data**
 
-A single HTML file you grab and go. No install, no server, no account. Open it in a browser and you are working. Everything saves locally in your browser and nothing leaves your machine.
+A single HTML file you grab and go. No install, no server, no account. Open it in a browser and you are working. Everything saves locally in your browser and nothing leaves your machine. Sample threat hunt and incident JSON files are included in this repository for self-driven demos of all features.
 
 ---
 
