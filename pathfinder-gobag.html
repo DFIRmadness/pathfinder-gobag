@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pathfinder-gobag v0.98 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
+  <title>Pathfinder-gobag v0.99 — The IR and Threat Hunting Workbench Illuminating the Path in the Data</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
 
   <script>
@@ -106,7 +106,7 @@
           <span class="text-base leading-none">🛡️</span>
         </div>
         <div class="leading-tight min-w-0">
-          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.98</span></div>
+          <div class="font-bold text-slate-900 dark:text-white text-sm tracking-tight whitespace-nowrap">Pathfinder-gobag <span class="text-slate-400 dark:text-slate-500 font-normal">v0.99</span></div>
           <div class="text-xs text-slate-500 dark:text-slate-400 tracking-wide whitespace-nowrap hidden sm:block">IR &amp; Threat Hunting Workbench · Illuminating the Path in the Data</div>
         </div>
       </div>
@@ -341,7 +341,7 @@
        ================================================================ -->
   <footer class="border-t border-slate-200 dark:border-slate-800 mt-8 py-4">
     <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-500">
-      <span>Pathfinder-gobag v0.98 · All data stored locally in your browser · No telemetry</span>
+      <span>Pathfinder-gobag v0.99 · All data stored locally in your browser · No telemetry</span>
       <span class="hidden sm:block">PICERL: SANS Incident Handler's Handbook · ABCs: Melone/Ritter, Microsoft Defender Virtual Ninja Training</span>
     </div>
   </footer>
@@ -1552,12 +1552,12 @@
       var editBtn = document.createElement('button');
       editBtn.type = 'button'; editBtn.textContent = '✏';
       editBtn.title = 'Edit';
-      editBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.65);font-size:13px;cursor:pointer;padding:0;line-height:1;';
+      editBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.65);font-size:13px;cursor:pointer;padding:0;line-height:1;opacity:0;transition:opacity 0.15s;';
       editBtn.onclick = function() { openExecSummaryModal(); };
       var closeBtn = document.createElement('button');
       closeBtn.type = 'button'; closeBtn.textContent = '×';
       closeBtn.title = 'Hide';
-      closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.65);font-size:18px;cursor:pointer;padding:0;line-height:1;';
+      closeBtn.style.cssText = 'background:none;border:none;color:rgba(255,255,255,0.65);font-size:18px;cursor:pointer;padding:0;line-height:1;opacity:0;transition:opacity 0.15s;';
       closeBtn.onclick = function() { toggleExecSummary(); };
       titleBar.appendChild(titleSpan);
       titleBar.appendChild(editBtn);
@@ -1570,10 +1570,12 @@
       var resizeHandle = document.createElement('div');
       resizeHandle.title = 'Drag to resize';
       resizeHandle.style.cssText = 'position:absolute;bottom:0;right:0;width:16px;height:16px;cursor:se-resize;' +
-        'background:linear-gradient(135deg,transparent 40%,' + (isDark ? '#475569' : '#94a3b8') + ' 40%);border-radius:0 0 8px 0;';
+        'background:linear-gradient(135deg,transparent 40%,' + (isDark ? '#475569' : '#94a3b8') + ' 40%);border-radius:0 0 8px 0;opacity:0;transition:opacity 0.15s;';
       panel.appendChild(titleBar);
       panel.appendChild(bodyDiv);
       panel.appendChild(resizeHandle);
+      panel.addEventListener('mouseenter', function() { editBtn.style.opacity='1'; closeBtn.style.opacity='1'; resizeHandle.style.opacity='1'; });
+      panel.addEventListener('mouseleave', function() { editBtn.style.opacity='0'; closeBtn.style.opacity='0'; resizeHandle.style.opacity='0'; });
       document.body.appendChild(panel);
       // Drag
       titleBar.addEventListener('mousedown', function(e) {
@@ -1936,6 +1938,26 @@
     function tlFindForm(el) {
       return el && (el.closest('.tl-add-form') || el.closest('.tl-edit-form'));
     }
+    window.setAngledStagger = function(mode) {
+      localStorage.setItem('ir-angled-stagger', mode);
+      renderAllTimelines();
+    };
+    window.setAngledSpread = function(delta) {
+      var cur = parseInt(localStorage.getItem('ir-angled-spread') || '0');
+      var next = Math.max(-4, Math.min(8, cur + delta));
+      localStorage.setItem('ir-angled-spread', String(next));
+      renderAllTimelines();
+    };
+    window.setAngledTelescope = function() {
+      var cur = parseInt(localStorage.getItem('ir-angled-telescope') || '0');
+      localStorage.setItem('ir-angled-telescope', String(cur >= 4 ? 0 : cur + 1));
+      renderAllTimelines();
+    };
+    window.resetAngledTelescope = function() {
+      localStorage.setItem('ir-angled-telescope', '0');
+      renderAllTimelines();
+    };
+
     window.tlSelectIcon = function(icon, btn) {
       var form = tlFindForm(btn);
       if (!form) return;
@@ -2216,6 +2238,17 @@
       ta.focus();
     };
 
+    window.toggleCardSide = function(id) {
+      var tl = loadTimeline();
+      var ev = tl.find(function(e) { return e.id === id; });
+      if (!ev) return;
+      if (ev.aboveOverride == null) ev.aboveOverride = true;
+      else if (ev.aboveOverride === true) ev.aboveOverride = false;
+      else ev.aboveOverride = null;
+      localStorage.setItem('ir-timeline', JSON.stringify(tl));
+      renderAllTimelines();
+    };
+
     window.toggleEventHidden = function(id) {
       var tl = loadTimeline();
       tl.forEach(function(ev) { if (ev.id === id) ev.hidden = !ev.hidden; });
@@ -2293,6 +2326,26 @@
           '<button onclick="setTimelineMode(\'vertical\')" class="' + (!isAngled ? pBtnOn : pBtnOff) + '">⬇ Vertical</button>' +
           '<button onclick="setTimelineMode(\'angled\')"   class="' + bL + (isAngled ? pBtnOn : pBtnOff) + '">↘ Angled</button>' +
         '</div>' +
+        (isAngled ? (function() {
+          var stg = localStorage.getItem('ir-angled-stagger') || 'above';
+          var nextStg = stg === 'above' ? 'below' : 'above';
+          var stgActive = stg === 'below';
+          var spread = parseInt(localStorage.getItem('ir-angled-spread') || '0');
+          var tel    = parseInt(localStorage.getItem('ir-angled-telescope') || '0');
+          var narrowOn = spread < 0, widenOn = spread > 0;
+          return '<button onclick="window.setAngledStagger(\'' + nextStg + '\')" class="' + pBtnBase + 'rounded-lg border ' + (stgActive ? 'border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '" title="Toggle which side the first card is placed on (above/below spine)">' + (stg === 'above' ? '↑↓ Stagger' : '↓↑ Stagger') + '</button>' +
+            '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
+              '<button onclick="window.setAngledSpread(-1)" title="Shorten spine" class="' + pBtnBase + (narrowOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">−</button>' +
+              '<button onclick="window.setAngledSpread(1)"  title="Lengthen spine" class="' + bL + pBtnBase + (widenOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">+</button>' +
+            '</div>' +
+            (tel > 0
+              ? '<div class="inline-flex rounded-lg border border-sky-400 dark:border-sky-600 overflow-hidden">' +
+                  '<button onclick="window.setAngledTelescope()" title="Extend left of spine (click to increase, × to reset)" class="' + pBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300">⇤ Telescope ' + tel + '</button>' +
+                  '<button onclick="window.resetAngledTelescope()" title="Reset telescope to 0" class="' + bL + pBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-800">×</button>' +
+                '</div>'
+              : '<button onclick="window.setAngledTelescope()" title="Extend left of spine to make room for the exec summary panel" class="' + pBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">⇤ Telescope</button>'
+            );
+        })() : '') +
         // Unscaled / Scaled
         '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
           '<button onclick="setTimelineScale(\'none\')" class="' + (!timeScale ? pBtnOn : pBtnOff) + '">Unscaled</button>' +
@@ -4149,6 +4202,26 @@
             '<button onclick="setTimelineMode(\'vertical\')" class="' + (!isAngled ? mBtnOn : mBtnOff) + '">⬇ Vertical</button>' +
             '<button onclick="setTimelineMode(\'angled\')" class="border-l border-slate-300 dark:border-slate-600 ' + (isAngled ? mBtnOn : mBtnOff) + '">↘ Angled</button>' +
           '</div>' +
+          (isAngled ? (function() {
+            var stg = localStorage.getItem('ir-angled-stagger') || 'above';
+            var nextStg = stg === 'above' ? 'below' : 'above';
+            var stgActive = stg === 'below';
+            var spread = parseInt(localStorage.getItem('ir-angled-spread') || '0');
+            var tel    = parseInt(localStorage.getItem('ir-angled-telescope') || '0');
+            var narrowOn = spread < 0, widenOn = spread > 0;
+            return '<button onclick="window.setAngledStagger(\'' + nextStg + '\')" class="' + mBtnBase + 'rounded-lg border ' + (stgActive ? 'border-sky-400 dark:border-sky-600 bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '" title="Toggle which side the first card is placed on (above/below spine)">' + (stg === 'above' ? '↑↓ Stagger' : '↓↑ Stagger') + '</button>' +
+              '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
+                '<button onclick="window.setAngledSpread(-1)" title="Shorten spine" class="' + mBtnBase + (narrowOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">−</button>' +
+                '<button onclick="window.setAngledSpread(1)"  title="Lengthen spine" class="border-l border-slate-300 dark:border-slate-600 ' + mBtnBase + (widenOn ? 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700') + '">+</button>' +
+              '</div>' +
+              (tel > 0
+                ? '<div class="inline-flex rounded-lg border border-sky-400 dark:border-sky-600 overflow-hidden">' +
+                    '<button onclick="window.setAngledTelescope()" title="Extend left of spine (click to increase, × to reset)" class="' + mBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300">⇤ Telescope ' + tel + '</button>' +
+                    '<button onclick="window.resetAngledTelescope()" title="Reset telescope to 0" class="border-l border-sky-400 dark:border-sky-600 ' + mBtnBase + 'bg-sky-50 dark:bg-sky-900 dark:bg-opacity-30 text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-800">×</button>' +
+                  '</div>'
+                : '<button onclick="window.setAngledTelescope()" title="Extend left of spine to make room for the exec summary panel" class="' + mBtnBase + 'rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700">⇤ Telescope</button>'
+              );
+          })() : '') +
           '<div class="inline-flex rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden">' +
             '<button onclick="setClockMode(false)" class="' + (!is24h ? mBtnOn : mBtnOff) + '">12h</button>' +
             '<button onclick="setClockMode(true)" class="border-l border-slate-300 dark:border-slate-600 ' + (is24h ? mBtnOn : mBtnOff) + '">24h</button>' +
@@ -4254,12 +4327,33 @@
           aCxPct = scaledTs.map(function(t) { return 8 + t * 84; });
           aCyPx  = scaledTs.map(function(t) { return atopPad + t * aInnerH; });
         }
+        var aSpread = parseInt(localStorage.getItem('ir-angled-spread') || '0');
+        if (aSpread !== 0 && n > 1) {
+          var aCxCenter = (aCxPct[0] + aCxPct[n - 1]) / 2;
+          var aCyCenter = (aCyPx[0] + aCyPx[n - 1]) / 2;
+          var aSpreadSF = 1 + aSpread * 0.12;
+          aCxPct = aCxPct.map(function(cx) {
+            return Math.max(2, Math.min(97, aCxCenter + (cx - aCxCenter) * aSpreadSF));
+          });
+          aCyPx = aCyPx.map(function(cy) {
+            return aCyCenter + (cy - aCyCenter) * aSpreadSF;
+          });
+        }
+        var aTelescope = parseInt(localStorage.getItem('ir-angled-telescope') || '0');
+        if (aTelescope > 0 && n > 1 && aCxPct[n-1] !== aCxPct[0]) {
+          var telSlope = (aCyPx[n-1] - aCyPx[0]) / (aCxPct[n-1] - aCxPct[0]);
+          var newCx0 = Math.max(1, aCxPct[0] - aTelescope * 5);
+          var actualDelta = aCxPct[0] - newCx0;
+          aCxPct[0] = newCx0;
+          aCyPx[0] = aCyPx[0] - actualDelta * telSlope;
+        }
         // ── Unified card collision resolution ─────────────────────────────────
         var aCxClose = 40; // cx% threshold: cards within this range may horizontally overlap
-        var aBounds = sorted.map(function(_, i) {
-          var above = (i % 2 === 0);
-          var t = above ? aCyPx[i] - aVGap - aCardH : aCyPx[i] + aVGap;
-          return { top: t, bottom: t + aCardH, isAbove: above };
+        var aStaggerFlip = (localStorage.getItem('ir-angled-stagger') === 'below');
+        var aBounds = sorted.map(function(ev, i) {
+          var isAbove = ev.aboveOverride != null ? ev.aboveOverride : ((i % 2 === 0) !== aStaggerFlip);
+          var top = isAbove ? aCyPx[i] - aCardH : aCyPx[i];
+          return { top: top, bottom: top + aCardH, isAbove: isAbove };
         });
         // Spine clearance: the spine diagonal enters a card's horizontal extent unless the card
         // is pushed far enough from its node. aSpSlope is px-of-Y per cx%-of-X.
@@ -4335,13 +4429,14 @@
         var svgMarkup = n > 1
           ? '<line x1="' + aSX1 + '%" y1="' + aSY1 + '%" x2="' + aSX2 + '%" y2="' + aSY2 + '%" stroke="' + spineColor + '" stroke-width="2" stroke-linecap="round"/>'
           : '';
+        var svgDots = '';
         var cardMarkup = '';
 
         sorted.forEach(function(ev, i) {
           var cx      = aCxPct[i].toFixed(2);
           var cyPx    = aCyPx[i];
           var cyPct   = (cyPx / aContH * 100).toFixed(2);
-          var isAbove = i % 2 === 0;
+          var isAbove = ev.aboveOverride != null ? ev.aboveOverride : ((i % 2 === 0) !== aStaggerFlip);
           var bounds  = aBounds[i];
           var dx = (ev.cardOffset && ev.cardOffset.dx) || 0;
           var dy = (ev.cardOffset && ev.cardOffset.dy) || 0;
@@ -4362,7 +4457,7 @@
 
           // Hidden: dimmed dot + tiny unhide stub
           if (ev.hidden) {
-            svgMarkup += '<circle cx="' + cx + '%" cy="' + cyPct + '%" r="3" fill="' + spineColor + '" opacity="0.5"/>';
+            svgDots += '<circle cx="' + cx + '%" cy="' + cyPct + '%" r="3" fill="' + spineColor + '" opacity="0.5"/>';
             svgMarkup += svgVert(spineColor, '1', ' opacity="0.3"') + svgHorz(spineColor, '1');
             var hBase  = 'position:absolute;left:calc(' + cx + '% + ' + dx + 'px);transform:translateX(-50%)';
             var hStyle = hBase + (isAbove ? ';bottom:' + (aContH - bounds.bottom - dy) + 'px' : ';top:' + (bounds.top + dy) + 'px');
@@ -4381,8 +4476,8 @@
             cardMarkup += '<div style="position:absolute;left:' + cx + '%;top:' + cyPct + '%;transform:translate(-50%,-50%);font-size:1.4rem;line-height:1;pointer-events:none;z-index:2;user-select:none">💥</div>';
           } else {
             var fill = DOT_HEX[ev.dot] || '#94a3b8';
-            svgMarkup += '<circle cx="' + cx + '%" cy="' + cyPct + '%" r="6" fill="' + fill + '" stroke="' + dotBorder + '" stroke-width="2"/>';
             svgMarkup += svgVert(lineColor, '2.5') + svgHorz(lineColor, '2.5');
+            svgDots += '<circle cx="' + cx + '%" cy="' + cyPct + '%" r="6" fill="' + fill + '" stroke="' + dotBorder + '" stroke-width="2"/>';
           }
 
           var timeLabel     = ev.time ? formatAbcdTime(ev.time) : '??:?? · Unknown time';
@@ -4423,12 +4518,18 @@
           } else {
             cardMarkup += '<div style="' + cardStyle + '">' +
               '<div class="bg-white dark:bg-slate-600 rounded-lg ' + aCardPad + ' border ' + impactBorder + ' shadow-sm text-xs group">' +
-                '<div class="flex items-start justify-between gap-1 mb-1">' +
-                  '<div class="flex items-center gap-1 min-w-0 overflow-hidden">' +
-                    (ev.icon ? '<span class="flex-shrink-0">' + ev.icon + '</span>' : '') +
+                '<div class="relative mb-1">' +
+                  '<div class="flex items-center gap-1">' +
+                    (ev.icon ? '<span class="flex-shrink-0">' + escHtml(ev.icon) + '</span>' : '') +
                     (ev.badge && showBadges ? '<span onclick="toggleTimelineLabel(\'' + ev.id + '\')" title="' + escHtml(ev.label) + '" class="font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer select-none ' + ev.badge + '">' + escHtml(expandedLabels[ev.id] ? ev.label : ev.label.split(' ')[0]) + '</span>' : '') +
+                    '<span class="font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">' + escHtml(timeLabel) + '</span>' +
                   '</div>' +
-                  '<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">' +
+                  '<div class="absolute right-0 top-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-slate-600 rounded pl-0.5">' +
+                    (function() {
+                      var sideIcon = ev.aboveOverride == null ? '↕' : (ev.aboveOverride ? '▲' : '▼');
+                      var sideActive = ev.aboveOverride != null;
+                      return '<button onclick="window.toggleCardSide(\'' + ev.id + '\')" title="Pin card side: ↕ follows stagger, ▲ always above, ▼ always below" class="' + (sideActive ? 'text-sky-500 hover:text-sky-700' : 'text-slate-400 hover:text-sky-500') + ' px-0.5 text-xs leading-none">' + sideIcon + '</button>';
+                    })() +
                     '<button onclick="nudgeCard(\'' + ev.id + '\',\'left\')"  title="Move left"  class="text-slate-400 hover:text-sky-500 px-0.5 text-xs leading-none">←</button>' +
                     '<button onclick="nudgeCard(\'' + ev.id + '\',\'right\')" title="Move right" class="text-slate-400 hover:text-sky-500 px-0.5 text-xs leading-none">→</button>' +
                     '<button onclick="nudgeCard(\'' + ev.id + '\',\'up\')"    title="Move up"    class="text-slate-400 hover:text-sky-500 px-0.5 text-xs leading-none">↑</button>' +
@@ -4447,14 +4548,13 @@
                   '<span onclick="window.tlToggleCardBodyHl(\'' + escHtml(ev.id) + '\')" class="ml-1 opacity-0 hover:opacity-100 cursor-pointer select-none transition-opacity" title="' + (tlHlBodyOff[ev.id] ? 'Show IOC highlights' : 'Hide IOC highlights') + '">🎯</span>' +
                 '</p>' : '') +
                 (ev.images && ev.images.length && ev.showImagesInPresentation !== false ? renderImageStrip(ev.images, 'pres', ev.id) : '') +
-                '<p class="text-slate-400 dark:text-slate-600 font-mono mt-1 truncate" title="' + escHtml(timeLabel) + '">' + escHtml(timeLabel) + '</p>' +
               '</div>' +
             '</div>';
           }
         });
 
         h += '<div style="position:relative;min-height:' + aContH + 'px">' +
-          '<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible" aria-hidden="true">' + svgMarkup + '</svg>' +
+          '<svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible" aria-hidden="true">' + svgMarkup + svgDots + '</svg>' +
           cardMarkup +
         '</div>';
 
@@ -4492,7 +4592,7 @@
           if (ev.hidden) {
             // Hidden stub — stays in position so spacers remain meaningful
             h += '<div class="relative"' + mbStyle + '>' +
-              '<div class="absolute -left-5 top-2.5 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-700 opacity-40"></div>' +
+              '<div class="absolute top-2.5 w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-500 border-2 border-white dark:border-slate-700 opacity-40" style="left:-29px"></div>' +
               '<div class="flex items-center gap-2 bg-slate-50 dark:bg-slate-600 rounded-lg px-3 py-2 border border-dashed border-slate-200 dark:border-slate-500 opacity-50">' +
                 '<span class="text-xs text-slate-400 font-medium truncate flex-1 min-w-0">' + escHtml(ev.title) + '</span>' +
                 '<button onclick="toggleEventHidden(\'' + ev.id + '\')" ' +
@@ -4507,7 +4607,7 @@
 
           if (isEditing) {
             h += '<div class="relative"' + mbStyle + '>' +
-              '<div class="absolute -left-6 top-4 w-4 h-4 rounded-full ' + ev.dot + ' border-2 border-white dark:border-slate-700 shadow-sm ring-2 ring-sky-400 ring-offset-1 dark:ring-offset-slate-700"></div>' +
+              '<div class="absolute top-4 w-4 h-4 rounded-full ' + ev.dot + ' border-2 border-white dark:border-slate-700 shadow-sm ring-2 ring-sky-400 ring-offset-1 dark:ring-offset-slate-700" style="left:-31px"></div>' +
               '<div class="tl-edit-form bg-white dark:bg-slate-600 rounded-lg p-4 border border-sky-400 dark:border-sky-500 shadow-md">' +
                 '<div class="text-xs font-bold text-sky-600 dark:text-sky-400 mb-3">✏️ Edit timeline card</div>' +
                 '<div class="space-y-3">' +
@@ -4538,8 +4638,8 @@
           } else {
             // Impact events: 💥 emoji on the line instead of a colored dot
             var dotHtml = ev.impact
-              ? '<div class="absolute -left-7 top-3 text-xl leading-none select-none" style="transform:translateX(-50%)">💥</div>'
-              : '<div class="absolute -left-6 top-4 w-4 h-4 rounded-full ' + ev.dot + ' border-2 border-white dark:border-slate-700 shadow-sm"></div>';
+              ? '<div class="absolute top-3 text-xl leading-none select-none" style="left:-23px;transform:translateX(-50%)">💥</div>'
+              : '<div class="absolute top-4 w-4 h-4 rounded-full ' + ev.dot + ' border-2 border-white dark:border-slate-700 shadow-sm" style="left:-31px"></div>';
 
             h += '<div class="relative"' + mbStyle + '>' +
               dotHtml +
@@ -5977,6 +6077,7 @@
 
     function openImportModal(bundle) {
       var incomingTl = Array.isArray(bundle.data['ir-timeline']) ? bundle.data['ir-timeline'] : [];
+      var incomingHunts = Array.isArray(bundle.data['ir-hunts']) ? bundle.data['ir-hunts'] : [];
       var existingTl = loadTimeline();
 
       // Remove any stale modal
@@ -5988,7 +6089,7 @@
       modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);padding:1rem';
       modal.innerHTML = '<div style="background:var(--modal-bg,#fff);color:var(--modal-text,#0f172a);border-radius:1rem;padding:2rem;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,0.3)" class="dark:bg-slate-900 dark:text-slate-100">' +
         '<h2 style="font-size:1.1rem;font-weight:800;margin:0 0 0.5rem" class="text-slate-900 dark:text-slate-100">📥 Import Options</h2>' +
-        '<p style="font-size:0.8rem;margin:0 0 1.25rem" class="text-slate-500 dark:text-slate-400">' + incomingTl.length + ' timeline event' + (incomingTl.length !== 1 ? 's' : '') + ' incoming · ' + existingTl.length + ' currently in session</p>' +
+        '<p style="font-size:0.8rem;margin:0 0 1.25rem" class="text-slate-500 dark:text-slate-400">' + incomingTl.length + ' timeline event' + (incomingTl.length !== 1 ? 's' : '') + (incomingHunts.length > 0 ? ' · ' + incomingHunts.length + ' hunt' + (incomingHunts.length !== 1 ? 's' : '') : '') + ' incoming · ' + existingTl.length + ' currently in session</p>' +
 
         '<div id="ir-import-modes" style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">' +
           ['replace','merge-all','merge-skip','review'].map(function(mode, idx) {
