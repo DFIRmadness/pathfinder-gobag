@@ -5932,7 +5932,7 @@
       });
       var inc = document.getElementById('incident-name');
       if (inc && bundle.data['ir-incident-name']) inc.value = bundle.data['ir-incident-name'];
-      renderAbcds(); syncToTimeline(); renderAllTimelines(); renderCycle(); renderPhaseDetail(selectedPhaseKey);
+      renderAbcds(); syncToTimeline(); renderAllTimelines(); renderCycle(); renderPhaseDetail(selectedPhaseKey); renderHunts();
     }
 
     function redetectHighlights(text, existing) {
