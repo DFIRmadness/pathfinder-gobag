@@ -2,6 +2,8 @@
 
 **The IR and Threat Hunting Workbench: Illuminating the Path in the Data**
 
+🔗 **[Try it live](https://dfirmadness.github.io/pathfinder-gobag/)** — no download required, runs entirely in your browser.
+
 A single HTML file you grab and go. No install, no server, no account. Open it in a browser and you are working. Everything saves locally in your browser and nothing leaves your machine. Sample files are included that provide 4 threat hunts and an extensive incident for a self-drive demo of all the features this application has to offer.
 
 ![Pathfinder-gobag overview](screenshots/01-hero.png)
