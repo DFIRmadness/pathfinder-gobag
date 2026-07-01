@@ -5201,7 +5201,7 @@
                 buildTlIconPicker(ev.icon || '') +
               '</td>' +
               '<td class="' + tdCls + '">' +
-                '<input type="text" data-wt="title" value="' + escHtml(ev.title || '') + '" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + '">' +
+                '<textarea data-wt="title" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + ' resize-y" style="height:' + (editingWorkingTlRowHeight ? Math.max(32, Math.round(editingWorkingTlRowHeight - 20)) : 32) + 'px">' + escHtml(ev.title || '') + '</textarea>' +
               '</td>' +
               '<td class="' + tdCls + '">' +
                 '<input type="text" data-wt="source" value="' + escHtml(ev.source || '') + '" placeholder="EDR, SIEM…" ' + enterSave + safeId + enterEsc + ' class="' + inputCls + '">' +
