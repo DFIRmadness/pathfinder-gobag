@@ -16,7 +16,7 @@ Pathfinder-gobag is a practitioner-first workbench for incident responders and t
 
 ### 1. Incident War Room
 
-A place to digitally track evidence like sticky notes on a whiteboard. Track IOCs and case notes using MIND and ABCs, create and track events in a timeline table, then push chosen events to a presentation ready killchain style timeline.
+A place to digitally track evidence like sticky notes on a whiteboard. Track IOCs, evidence, pivots, and case notes using MIND and ABCs, create and track events in a timeline table, then push chosen events to a presentation ready killchain style timeline.
 
 #### MIND IOC Tracker
 
